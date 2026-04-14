@@ -229,7 +229,14 @@ func validateSettingValue(key, valueType, value string) error {
 		}
 
 	case "string":
-		// 字符串无需额外验证
+		// 按配置项定义具体约束
+		switch key {
+		case "protocol_adapter_mode":
+			validModes := map[string]bool{"same_only": true, "prefer_same": true, "always_convert": true}
+			if !validModes[value] {
+				return fmt.Errorf("protocol_adapter_mode must be one of: same_only, prefer_same, always_convert")
+			}
+		}
 
 	default:
 		return fmt.Errorf("unknown value type: %s", valueType)

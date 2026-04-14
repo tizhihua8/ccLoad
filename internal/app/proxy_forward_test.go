@@ -31,7 +31,7 @@ func runHandleSuccessResponse(t *testing.T, body string, headers http.Header, is
 	s := &Server{}
 
 	cfg := &model.Config{ID: 1}
-	res, _, err := s.handleResponse(reqCtx, resp, rec, channelType, cfg, "sk-test", nil)
+	res, _, err := s.handleResponse(reqCtx, resp, rec, channelType, cfg, "sk-test", nil, false)
 	if err != nil {
 		t.Fatalf("handleResponse returned error: %v", err)
 	}

@@ -14,6 +14,10 @@ func DefineChannelsTable() *TableBuilder {
 		Column("cooldown_until BIGINT NOT NULL DEFAULT 0").
 		Column("cooldown_duration_ms BIGINT NOT NULL DEFAULT 0").
 		Column("daily_cost_limit DOUBLE NOT NULL DEFAULT 0").
+		Column("ua_rewrite_enabled TINYINT NOT NULL DEFAULT 0").
+		Column("ua_override VARCHAR(512) NOT NULL DEFAULT ''").
+		Column("ua_prefix VARCHAR(256) NOT NULL DEFAULT ''").
+		Column("ua_suffix VARCHAR(256) NOT NULL DEFAULT ''").
 		Column("created_at BIGINT NOT NULL").
 		Column("updated_at BIGINT NOT NULL").
 		Index("idx_channels_enabled", "enabled").

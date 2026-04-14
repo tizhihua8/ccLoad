@@ -215,6 +215,15 @@ window.I18N_LOCALES['zh-CN'] = {
   'channels.priority': '优先级',
   'channels.dailyCostLimit': '每日限额',
   'channels.dailyCostLimitPlaceholder': '0=无限制',
+  'channels.uaOverride': 'UA 覆写',
+  'channels.uaRewriteEnabled': 'UA覆写',
+  'channels.uaRewriteEnabledHint': '启用',
+  'channels.uaOverridePlaceholder': '留空则透传客户端 UA',
+  'channels.uaPrefix': 'UA 前缀',
+  'channels.uaPrefixPlaceholder': '追加到原有 UA 前',
+  'channels.uaSuffix': 'UA 后缀',
+  'channels.uaSuffixPlaceholder': '追加到原有 UA 后',
+  'channels.uaHint': '覆写优先于前缀/后缀，留空均不修改 UA',
 
   // 删除确认（扁平化键名）
   'channels.confirmDeleteTitle': '确认删除',

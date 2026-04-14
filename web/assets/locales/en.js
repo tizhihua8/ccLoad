@@ -215,6 +215,15 @@ window.I18N_LOCALES['en'] = {
   'channels.priority': 'Priority',
   'channels.dailyCostLimit': 'Daily Limit',
   'channels.dailyCostLimitPlaceholder': '0=No limit',
+  'channels.uaOverride': 'UA Override',
+  'channels.uaRewriteEnabled': 'UA Rewrite',
+  'channels.uaRewriteEnabledHint': 'Enable',
+  'channels.uaOverridePlaceholder': 'Leave empty to pass-through client UA',
+  'channels.uaPrefix': 'UA Prefix',
+  'channels.uaPrefixPlaceholder': 'Prepend to original UA',
+  'channels.uaSuffix': 'UA Suffix',
+  'channels.uaSuffixPlaceholder': 'Append to original UA',
+  'channels.uaHint': 'Override takes precedence over prefix/suffix',
 
   // Delete Confirmation (flattened keys)
   'channels.confirmDeleteTitle': 'Confirm Delete',

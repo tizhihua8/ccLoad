@@ -125,6 +125,7 @@ type proxyRequestContext struct {
 	startTime        time.Time        // 请求开始时间（用于统计）
 	attemptStartTime time.Time        // 渠道尝试开始时间（用于日志记录）
 	baseURL          string           // 当前尝试使用的上游URL（多URL场景）
+	clientProtocol   string           // 客户端协议类型（anthropic/openai/gemini/codex）
 }
 
 // proxyResult 代理请求结果
@@ -278,6 +279,29 @@ func copyRequestHeaders(dst *http.Request, src http.Header) {
 	if dst.Header.Get("Accept") == "" {
 		dst.Header.Set("Accept", "application/json")
 	}
+}
+
+// applyUAOverride 应用渠道级 UA 覆写（需先检查 enabled 开关）
+// 优先级：ua_override > ua_prefix/ua_suffix > 透传客户端 UA
+func applyUAOverride(dst *http.Request, enabled bool, uaOverride, uaPrefix, uaSuffix string) {
+	if !enabled {
+		return // 开关关闭，保持透传
+	}
+	if uaOverride != "" {
+		dst.Header.Set("User-Agent", uaOverride)
+		return
+	}
+	if uaPrefix == "" && uaSuffix == "" {
+		return // 无覆写，保持透传
+	}
+	originalUA := dst.Header.Get("User-Agent")
+	if uaPrefix != "" {
+		originalUA = uaPrefix + originalUA
+	}
+	if uaSuffix != "" {
+		originalUA = originalUA + uaSuffix
+	}
+	dst.Header.Set("User-Agent", originalUA)
 }
 
 // injectAPIKeyHeaders 按路径类型注入API Key头（Gemini vs Claude）

@@ -54,6 +54,12 @@ type Config struct {
 	// 每日成本限额
 	DailyCostLimit float64 `json:"daily_cost_limit"` // 每日成本限额（美元），0表示无限制
 
+	// User-Agent 覆写
+	UARewriteEnabled bool   `json:"ua_rewrite_enabled"` // 是否启用 UA 覆写（默认关闭，透传客户端 UA）
+	UAOverride       string `json:"ua_override"`        // 完全覆写 UA（非空时替换客户端 UA）
+	UAPrefix         string `json:"ua_prefix"`          // UA 前缀追加（在原有 UA 前添加）
+	UASuffix         string `json:"ua_suffix"`          // UA 后缀追加（在原有 UA 后添加）
+
 	CreatedAt JSONTime `json:"created_at"` // 使用JSONTime确保序列化格式一致（RFC3339）
 	UpdatedAt JSONTime `json:"updated_at"` // 使用JSONTime确保序列化格式一致（RFC3339）
 

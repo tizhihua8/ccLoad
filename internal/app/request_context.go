@@ -16,6 +16,11 @@ type requestContext struct {
 	isStreaming       bool
 	firstByteTimer    *time.Timer
 	firstByteTimedOut atomic.Bool
+
+	// 协议适配信息（用于响应转换）
+	clientProtocol   string // 客户端协议类型
+	upstreamProtocol string // 上游协议类型
+	needsConversion  bool   // 是否需要协议转换
 }
 
 // newRequestContext 创建请求上下文（处理超时控制）
@@ -57,6 +62,13 @@ func (s *Server) newRequestContext(parentCtx context.Context, requestPath string
 	}
 
 	return reqCtx
+}
+
+// setProtocolInfo 设置协议适配信息（用于响应转换）
+func (rc *requestContext) setProtocolInfo(clientProtocol, upstreamProtocol string, needsConversion bool) {
+	rc.clientProtocol = clientProtocol
+	rc.upstreamProtocol = upstreamProtocol
+	rc.needsConversion = needsConversion
 }
 
 func (rc *requestContext) stopFirstByteTimer() {

@@ -302,18 +302,19 @@ func (s *Server) HandleProxyRequest(c *gin.Context) {
 	tokenIDInt64, _ := tokenID.(int64)
 
 	reqCtx := &proxyRequestContext{
-		originalModel: originalModel,
-		requestMethod: requestMethod,
-		requestPath:   requestPath,
-		rawQuery:      c.Request.URL.RawQuery,
-		body:          all,
-		header:        c.Request.Header,
-		isStreaming:   isStreaming,
-		tokenHash:     tokenHashStr,
-		tokenID:       tokenIDInt64,
-		clientIP:      c.ClientIP(),
-		activeReqID:   activeID,
-		startTime:     startTime,
+		originalModel:  originalModel,
+		requestMethod:  requestMethod,
+		requestPath:    requestPath,
+		rawQuery:       c.Request.URL.RawQuery,
+		body:           all,
+		header:         c.Request.Header,
+		isStreaming:    isStreaming,
+		tokenHash:      tokenHashStr,
+		tokenID:        tokenIDInt64,
+		clientIP:       c.ClientIP(),
+		activeReqID:    activeID,
+		startTime:      startTime,
+		clientProtocol: util.DetectChannelTypeFromPath(requestPath),
 	}
 	reqCtx.observer = &ForwardObserver{
 		OnBytesRead: func(n int64) {

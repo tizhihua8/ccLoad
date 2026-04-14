@@ -125,3 +125,17 @@ const (
 	// StartupMigrationTimeout 数据库迁移超时
 	StartupMigrationTimeout = 30 * time.Second
 )
+
+// 协议适配器配置常量
+const (
+	// DefaultProtocolAdapterEnabled 是否启用协议适配（跨协议转换）
+	// false = 保持原有行为（同协议匹配）
+	// true = 启用跨协议自动转换
+	DefaultProtocolAdapterEnabled = false
+
+	// DefaultProtocolAdapterMode 协议适配器工作模式
+	// - "same_only": 只匹配同协议渠道（当前默认行为）
+	// - "prefer_same": 优先同协议，无则跨协议转换
+	// - "always_convert": 总是允许跨协议
+	DefaultProtocolAdapterMode = "prefer_same"
+)

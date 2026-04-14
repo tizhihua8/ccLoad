@@ -310,6 +310,10 @@ async function editChannel(id) {
   }
   document.getElementById('channelPriority').value = channel.priority;
   document.getElementById('channelDailyCostLimit').value = channel.daily_cost_limit || 0;
+  document.getElementById('channelUARewriteEnabled').checked = !!channel.ua_rewrite_enabled;
+  document.getElementById('channelUAOverride').value = channel.ua_override || '';
+  document.getElementById('channelUAPrefix').value = channel.ua_prefix || '';
+  document.getElementById('channelUASuffix').value = channel.ua_suffix || '';
   document.getElementById('channelEnabled').checked = channel.enabled;
   document.getElementById('channelScheduledCheckEnabled').checked = !!channel.scheduled_check_enabled;
   document.getElementById('channelScheduledCheckModel').value = channel.scheduled_check_model || '';
@@ -396,6 +400,10 @@ async function saveChannel(event) {
     key_strategy: keyStrategy,
     priority: parseInt(document.getElementById('channelPriority').value) || 0,
     daily_cost_limit: parseFloat(document.getElementById('channelDailyCostLimit').value) || 0,
+    ua_rewrite_enabled: document.getElementById('channelUARewriteEnabled').checked,
+    ua_override: document.getElementById('channelUAOverride').value.trim(),
+    ua_prefix: document.getElementById('channelUAPrefix').value.trim(),
+    ua_suffix: document.getElementById('channelUASuffix').value.trim(),
     models: models,
     enabled: document.getElementById('channelEnabled').checked,
     scheduled_check_enabled: document.getElementById('channelScheduledCheckEnabled').checked,

@@ -22,6 +22,7 @@ func (s *SQLStore) ListConfigs(ctx context.Context) ([]*model.Config, error) {
 			SELECT c.id, c.name, c.url, c.priority, c.channel_type, c.enabled,
 			       c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
+			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -58,6 +59,7 @@ func (s *SQLStore) GetConfig(ctx context.Context, id int64) (*model.Config, erro
 			SELECT c.id, c.name, c.url, c.priority, c.channel_type, c.enabled,
 			       c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
+			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -156,6 +158,7 @@ func (s *SQLStore) GetEnabledChannelsByType(ctx context.Context, channelType str
 			SELECT c.id, c.name, c.url, c.priority,
 			       c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
+			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -199,10 +202,12 @@ func (s *SQLStore) CreateConfig(ctx context.Context, c *model.Config) (*model.Co
 		if id == 0 {
 			// 插入渠道记录（数据库生成自增 id）
 			res, err := tx.ExecContext(ctx, `
-				INSERT INTO channels(name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model, daily_cost_limit, created_at, updated_at)
-				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO channels(name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model, daily_cost_limit, ua_rewrite_enabled, ua_override, ua_prefix, ua_suffix, created_at, updated_at)
+				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`, c.Name, c.URL, c.Priority, channelType,
-				boolToInt(c.Enabled), boolToInt(c.ScheduledCheckEnabled), c.ScheduledCheckModel, c.DailyCostLimit, nowUnix, nowUnix)
+				boolToInt(c.Enabled), boolToInt(c.ScheduledCheckEnabled), c.ScheduledCheckModel, c.DailyCostLimit,
+				boolToInt(c.UARewriteEnabled), c.UAOverride, c.UAPrefix, c.UASuffix,
+				nowUnix, nowUnix)
 			if err != nil {
 				return err
 			}
@@ -215,29 +220,37 @@ func (s *SQLStore) CreateConfig(ctx context.Context, c *model.Config) (*model.Co
 			// 显式主键：用于混合存储同步/恢复，保证两端主键一致
 			if s.IsSQLite() {
 				_, err := tx.ExecContext(ctx, `
-					INSERT INTO channels(id, name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model, daily_cost_limit, created_at, updated_at)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					INSERT INTO channels(id, name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model, daily_cost_limit, ua_rewrite_enabled, ua_override, ua_prefix, ua_suffix, created_at, updated_at)
+					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				`, id, c.Name, c.URL, c.Priority, channelType,
-					boolToInt(c.Enabled), boolToInt(c.ScheduledCheckEnabled), c.ScheduledCheckModel, c.DailyCostLimit, nowUnix, nowUnix)
+					boolToInt(c.Enabled), boolToInt(c.ScheduledCheckEnabled), c.ScheduledCheckModel, c.DailyCostLimit,
+					boolToInt(c.UARewriteEnabled), c.UAOverride, c.UAPrefix, c.UASuffix,
+					nowUnix, nowUnix)
 				if err != nil {
 					return err
 				}
 			} else {
 				_, err := tx.ExecContext(ctx, `
-					INSERT INTO channels(id, name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model, daily_cost_limit, created_at, updated_at)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-					ON DUPLICATE KEY UPDATE
-						name = VALUES(name),
-						url = VALUES(url),
-						priority = VALUES(priority),
-						channel_type = VALUES(channel_type),
-						enabled = VALUES(enabled),
-						scheduled_check_enabled = VALUES(scheduled_check_enabled),
-						scheduled_check_model = VALUES(scheduled_check_model),
-						daily_cost_limit = VALUES(daily_cost_limit),
-						updated_at = VALUES(updated_at)
+				INSERT INTO channels(id, name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model, daily_cost_limit, ua_rewrite_enabled, ua_override, ua_prefix, ua_suffix, created_at, updated_at)
+				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				ON DUPLICATE KEY UPDATE
+				name = VALUES(name),
+				url = VALUES(url),
+				priority = VALUES(priority),
+				channel_type = VALUES(channel_type),
+				enabled = VALUES(enabled),
+				scheduled_check_enabled = VALUES(scheduled_check_enabled),
+				scheduled_check_model = VALUES(scheduled_check_model),
+				daily_cost_limit = VALUES(daily_cost_limit),
+				ua_override = VALUES(ua_override),
+				ua_rewrite_enabled = VALUES(ua_rewrite_enabled),
+				ua_prefix = VALUES(ua_prefix),
+				ua_suffix = VALUES(ua_suffix),
+				updated_at = VALUES(updated_at)
 				`, id, c.Name, c.URL, c.Priority, channelType,
-					boolToInt(c.Enabled), boolToInt(c.ScheduledCheckEnabled), c.ScheduledCheckModel, c.DailyCostLimit, nowUnix, nowUnix)
+					boolToInt(c.Enabled), boolToInt(c.ScheduledCheckEnabled), c.ScheduledCheckModel, c.DailyCostLimit,
+					boolToInt(c.UARewriteEnabled), c.UAOverride, c.UAPrefix, c.UASuffix,
+					nowUnix, nowUnix)
 				if err != nil {
 					return err
 				}
@@ -286,10 +299,12 @@ func (s *SQLStore) UpdateConfig(ctx context.Context, id int64, upd *model.Config
 		// 更新渠道记录
 		_, err := tx.ExecContext(ctx, `
 			UPDATE channels
-			SET name=?, url=?, priority=?, channel_type=?, enabled=?, scheduled_check_enabled=?, scheduled_check_model=?, daily_cost_limit=?, updated_at=?
+			SET name=?, url=?, priority=?, channel_type=?, enabled=?, scheduled_check_enabled=?, scheduled_check_model=?, daily_cost_limit=?, ua_override=?, ua_prefix=?, ua_suffix=?, updated_at=?
 			WHERE id=?
 		`, name, url, upd.Priority, channelType,
-			boolToInt(upd.Enabled), boolToInt(upd.ScheduledCheckEnabled), upd.ScheduledCheckModel, upd.DailyCostLimit, updatedAtUnix, id)
+			boolToInt(upd.Enabled), boolToInt(upd.ScheduledCheckEnabled), upd.ScheduledCheckModel, upd.DailyCostLimit,
+			upd.UAOverride, upd.UAPrefix, upd.UASuffix,
+			updatedAtUnix, id)
 		if err != nil {
 			return err
 		}

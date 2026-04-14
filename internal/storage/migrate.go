@@ -89,6 +89,9 @@ func migrate(ctx context.Context, db *sql.DB, dialect Dialect) error {
 			if err := ensureChannelsScheduledCheckModel(ctx, db, dialect); err != nil {
 				return fmt.Errorf("migrate channels scheduled_check_model: %w", err)
 			}
+			if err := ensureChannelsUAOverride(ctx, db, dialect); err != nil {
+				return fmt.Errorf("migrate channels ua override: %w", err)
+			}
 			// 增量迁移：将url字段从VARCHAR(191)扩展为TEXT（支持多URL存储）
 			if err := migrateChannelsURLToText(ctx, db, dialect); err != nil {
 				return fmt.Errorf("migrate channels url to text: %w", err)
@@ -705,6 +708,9 @@ func initDefaultSettings(ctx context.Context, db *sql.DB, dialect Dialect) error
 		{"health_min_confident_sample", "20", "int", "置信样本量阈值(样本量达到此值时惩罚全额生效)", "20"},
 		// 冷却兜底配置
 		{"cooldown_fallback_enabled", "true", "bool", "所有渠道冷却时选最优渠道兜底(关闭则直接拒绝请求)", "true"},
+		// 协议适配器配置
+		{"protocol_adapter_enabled", "false", "bool", "启用协议适配器(允许跨协议转换，如OpenAI↔Anthropic)", "false"},
+		{"protocol_adapter_mode", "prefer_same", "string", "协议适配模式(same_only=只匹配同协议/prefer_same=优先同协议/always_convert=总是跨协议)", "prefer_same"},
 	}
 
 	var query string
@@ -1393,7 +1399,44 @@ func ensureChannelsScheduledCheckModel(ctx context.Context, db *sql.DB, dialect 
 	return ensureSQLiteColumns(ctx, db, "channels", []sqliteColumnDef{{name: "scheduled_check_model", definition: "TEXT NOT NULL DEFAULT ''"}})
 }
 
-// ensureAPIKeysAPIKeyLength 修复 api_keys.api_key 列定义漂移（MySQL）
+// ensureChannelsUAOverride 添加渠道 UA 覆写字段
+func ensureChannelsUAOverride(ctx context.Context, db *sql.DB, dialect Dialect) error {
+	columns := []struct {
+		name, def string
+	}{
+		{"ua_rewrite_enabled", "TINYINT NOT NULL DEFAULT 0"},
+		{"ua_override", "VARCHAR(512) NOT NULL DEFAULT ''"},
+		{"ua_prefix", "VARCHAR(256) NOT NULL DEFAULT ''"},
+		{"ua_suffix", "VARCHAR(256) NOT NULL DEFAULT ''"},
+	}
+
+	if dialect == DialectMySQL {
+		for _, col := range columns {
+			var count int
+			err := db.QueryRowContext(ctx,
+				"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='channels' AND COLUMN_NAME='"+col.name+"'",
+			).Scan(&count)
+			if err != nil {
+				return fmt.Errorf("check %s field: %w", col.name, err)
+			}
+			if count == 0 {
+				if _, err := db.ExecContext(ctx,
+					"ALTER TABLE channels ADD COLUMN "+col.name+" "+col.def); err != nil {
+					return fmt.Errorf("add %s column: %w", col.name, err)
+				}
+				log.Printf("[MIGRATE] Added channels.%s column", col.name)
+			}
+		}
+		return nil
+	}
+
+	sqliteCols := make([]sqliteColumnDef, len(columns))
+	for i, col := range columns {
+		sqliteCols[i] = sqliteColumnDef{name: col.name, definition: strings.ReplaceAll(col.def, "VARCHAR", "TEXT")}
+		sqliteCols[i].definition = strings.ReplaceAll(sqliteCols[i].definition, "TINYINT", "INTEGER")
+	}
+	return ensureSQLiteColumns(ctx, db, "channels", sqliteCols)
+}
 func ensureAPIKeysAPIKeyLength(ctx context.Context, db *sql.DB, dialect Dialect) error {
 	if dialect != DialectMySQL {
 		return nil

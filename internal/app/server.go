@@ -27,9 +27,10 @@ type Server struct {
 	// ============================================================================
 	// 服务层
 	// ============================================================================
-	authService   *AuthService   // 认证授权服务
-	logService    *LogService    // 日志管理服务
-	configService *ConfigService // 配置管理服务
+	authService      *AuthService      // 认证授权服务
+	logService       *LogService       // 日志管理服务
+	configService    *ConfigService    // 配置管理服务
+	protocolAdapter  *ProtocolAdapter   // 协议适配器（跨协议转换）
 
 	// ============================================================================
 	// 核心字段
@@ -289,6 +290,14 @@ func NewServer(store storage.Store) *Server {
 		s.loginRateLimiter,
 		store, // 传入store用于热更新令牌
 	)
+
+	// 3. ProtocolAdapter（协议适配器，跨协议转换）
+	s.protocolAdapter = NewProtocolAdapter(configService)
+	if s.protocolAdapter.IsEnabled() {
+		log.Printf("[INFO] 协议适配器已启用（模式: %s），支持跨协议请求转换", s.protocolAdapter.GetMode())
+	} else {
+		log.Print("[INFO] 协议适配器未启用（仅同协议渠道匹配）")
+	}
 
 	// 启动Token统计Worker（有界队列：性能可控，Shutdown可等待）
 	s.wg.Add(1)

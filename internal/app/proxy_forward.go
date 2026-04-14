@@ -62,7 +62,7 @@ func prependToBody(resp *http.Response, prefix []byte) {
 // 从proxy.go提取，遵循SRP原则
 func (s *Server) buildProxyRequest(
 	reqCtx *requestContext,
-	_ *model.Config,
+	cfg *model.Config,
 	apiKey string,
 	method string,
 	body []byte,
@@ -82,7 +82,10 @@ func (s *Server) buildProxyRequest(
 	// 3. 复制请求头
 	copyRequestHeaders(req, hdr)
 
-	// 4. 注入认证头
+	// 4. 应用渠道级 UA 覆写
+	applyUAOverride(req, cfg.UARewriteEnabled, cfg.UAOverride, cfg.UAPrefix, cfg.UASuffix)
+
+	// 5. 注入认证头
 	injectAPIKeyHeaders(req, apiKey, requestPath)
 
 	return req, nil
@@ -177,6 +180,7 @@ func streamAndParseResponse(
 	channelType string,
 	isStreaming bool,
 	beforeWrite func(usageParser) error,
+	streamConverter StreamConverter,
 ) (usageParser, error) {
 	makeFeed := func(parser usageParser) func([]byte) error {
 		return func(data []byte) error {
@@ -190,10 +194,16 @@ func streamAndParseResponse(
 		}
 	}
 
+	// 创建包装 writer 以支持协议转换
+	var responseWriter http.ResponseWriter = w
+	if streamConverter != nil {
+		responseWriter = newConvertingResponseWriter(w, streamConverter)
+	}
+
 	// SSE流式响应
 	if strings.Contains(contentType, "text/event-stream") {
 		parser := newSSEUsageParser(channelType)
-		streamErr := streamCopySSE(ctx, body, w, makeFeed(parser))
+		streamErr := streamCopySSE(ctx, body, responseWriter, makeFeed(parser))
 		return parser, streamErr
 	}
 
@@ -204,17 +214,17 @@ func streamAndParseResponse(
 
 		if looksLikeSSE(probe) {
 			parser := newSSEUsageParser(channelType)
-			sseErr := streamCopySSE(ctx, io.NopCloser(reader), w, makeFeed(parser))
+			sseErr := streamCopySSE(ctx, io.NopCloser(reader), responseWriter, makeFeed(parser))
 			return parser, sseErr
 		}
 		parser := newJSONUsageParser(channelType)
-		copyErr := streamCopy(ctx, io.NopCloser(reader), w, makeFeed(parser))
+		copyErr := streamCopy(ctx, io.NopCloser(reader), responseWriter, makeFeed(parser))
 		return parser, copyErr
 	}
 
 	// 非SSE响应：边转发边缓存
 	parser := newJSONUsageParser(channelType)
-	copyErr := streamCopy(ctx, body, w, makeFeed(parser))
+	copyErr := streamCopy(ctx, body, responseWriter, makeFeed(parser))
 	return parser, copyErr
 }
 
@@ -293,6 +303,17 @@ func (s *Server) handleSuccessResponse(
 
 	// 流式传输并解析usage
 	contentType := resp.Header.Get("Content-Type")
+
+	// 如果需要响应转换，创建流式转换器
+	var streamConverter StreamConverter
+	if reqCtx.needsConversion && s.protocolAdapter != nil {
+		var err error
+		streamConverter, err = s.protocolAdapter.CreateStreamConverter(reqCtx.upstreamProtocol, reqCtx.clientProtocol)
+		if err != nil {
+			streamConverter = nil // 转换器创建失败，继续原样输出
+		}
+	}
+
 	parser, streamErr := streamAndParseResponse(
 		reqCtx.ctx, resp.Body, streamWriter, contentType, channelType, reqCtx.isStreaming,
 		func(parser usageParser) error {
@@ -305,6 +326,7 @@ func (s *Server) handleSuccessResponse(
 			deferredWriter.Commit()
 			return nil
 		},
+		streamConverter,
 	)
 	abortedBeforeCommit := errors.Is(streamErr, errAbortStreamBeforeWrite)
 	if abortedBeforeCommit {
@@ -402,6 +424,7 @@ func (s *Server) handleResponse(
 	cfg *model.Config,
 	_ string,
 	observer *ForwardObserver,
+	_ bool,
 ) (*fwResult, float64, error) {
 	hdrClone := resp.Header.Clone()
 
@@ -510,10 +533,15 @@ func (s *Server) handleResponse(
 // 从proxy.go提取，遵循SRP原则
 // 参数新增 apiKey 用于直接传递已选中的API Key（从KeySelector获取）
 // 参数新增 method 用于支持任意HTTP方法（GET、POST、PUT、DELETE等）
-func (s *Server) forwardOnceAsync(ctx context.Context, cfg *model.Config, apiKey string, method string, body []byte, hdr http.Header, rawQuery, requestPath string, baseURL string, w http.ResponseWriter, observer *ForwardObserver) (*fwResult, float64, error) {
+func (s *Server) forwardOnceAsync(ctx context.Context, cfg *model.Config, apiKey string, method string, body []byte, hdr http.Header, rawQuery, requestPath string, baseURL string, w http.ResponseWriter, observer *ForwardObserver, needsResponseConversion bool, clientProtocol string) (*fwResult, float64, error) {
 	// 1. 创建请求上下文（处理超时）
 	reqCtx := s.newRequestContext(ctx, requestPath, body)
 	defer reqCtx.cleanup() // [INFO] 统一清理：定时器 + context（总是安全）
+
+	// 设置协议转换信息
+	if needsResponseConversion {
+		reqCtx.setProtocolInfo(clientProtocol, cfg.GetChannelType(), true)
+	}
 
 	// 2. 构建上游请求
 	req, err := s.buildProxyRequest(reqCtx, cfg, apiKey, method, body, hdr, rawQuery, requestPath, baseURL)
@@ -529,10 +557,10 @@ func (s *Server) forwardOnceAsync(ctx context.Context, cfg *model.Config, apiKey
 	// 解决：使用 Go 1.21+ context.AfterFunc 替代手动 goroutine（零泄漏风险）
 	//   - HTTP/1.1: 关闭 TCP 连接 → 上游收到 RST，立即停止发送
 	//   - HTTP/2: 发送 RST_STREAM 帧 → 取消当前 stream（不影响同连接的其他请求）
-	// 效果：避免 AI 流式生成场景下，用户点"停止"后上游仍生成数千 tokens 的浪费
+	// 效果：避免 AI 流式生成场景下，用户点”停止”后上游仍生成数千 tokens 的浪费
 	if resp != nil {
 		// 注意：resp.Body 后续会被包装（例如 firstByteDetector）。
-		// 因此需要先把 body 封装成“稳定引用”，避免取消 goroutine 与包装赋值发生 data race。
+		// 因此需要先把 body 封装成”稳定引用”，避免取消 goroutine 与包装赋值发生 data race。
 		body := &onceCloseReadCloser{ReadCloser: resp.Body}
 		resp.Body = body
 
@@ -552,7 +580,7 @@ func (s *Server) forwardOnceAsync(ctx context.Context, cfg *model.Config, apiKey
 	// 4. 处理响应(传递channelType用于精确识别usage格式,传递渠道信息用于日志记录,传递观测回调)
 	var res *fwResult
 	var duration float64
-	res, duration, err = s.handleResponse(reqCtx, resp, w, cfg.ChannelType, cfg, apiKey, observer)
+	res, duration, err = s.handleResponse(reqCtx, resp, w, cfg.ChannelType, cfg, apiKey, observer, needsResponseConversion)
 
 	// [FIX] 2025-12: 流式传输过程中首字节超时的错误修正
 	// 场景：响应头已收到(200 OK)，但在读取响应体时超时定时器触发
@@ -595,10 +623,38 @@ func (s *Server) forwardAttempt(
 	reqCtx.attemptStartTime = time.Now()
 	reqCtx.baseURL = baseURL
 
+	// 协议适配：检查是否需要跨协议转换
+	channelType := cfg.GetChannelType()
+	convertedBody := bodyToSend
+	convertedPath := requestPath
+	needsResponseConversion := false
+
+	if s.protocolAdapter != nil && s.protocolAdapter.IsEnabled() {
+		clientProtocol := reqCtx.clientProtocol
+		if clientProtocol != "" && clientProtocol != channelType {
+			// 需要协议转换
+			targetModel := s.protocolAdapter.MapModel(actualModel, clientProtocol, channelType)
+			if targetModel == "" {
+				targetModel = actualModel
+			}
+
+			newBody, newPath, err := s.protocolAdapter.ConvertRequest(bodyToSend, clientProtocol, channelType, targetModel)
+			if err == nil && newBody != nil {
+				convertedBody = newBody
+				convertedPath = newPath
+				needsResponseConversion = true
+				if newPath == "" {
+					// 如果转换器没返回路径，使用目标协议的默认路径
+					convertedPath = s.protocolAdapter.GetSupportedEndpoint(channelType, reqCtx.isStreaming)
+				}
+			}
+		}
+	}
+
 	// 转发请求（传递实际的API Key字符串和观测回调）
 	// [FIX] 2026-01: 使用传入的 requestPath（可能已替换模型名）而非 reqCtx.requestPath
 	res, duration, err := s.forwardOnceAsync(ctx, cfg, selectedKey, reqCtx.requestMethod,
-		bodyToSend, reqCtx.header, reqCtx.rawQuery, requestPath, baseURL, w, reqCtx.observer)
+		convertedBody, reqCtx.header, reqCtx.rawQuery, convertedPath, baseURL, w, reqCtx.observer, needsResponseConversion, reqCtx.clientProtocol)
 
 	// 处理网络错误或异常响应（如空响应）
 	// [INFO] 修复：handleResponse可能返回err即使StatusCode=200（例如Content-Length=0）
@@ -918,4 +974,52 @@ func checkSoftError(data []byte, contentType string) bool {
 	}
 
 	return false
+}
+
+// convertingResponseWriter 包装 ResponseWriter 以进行协议转换
+type convertingResponseWriter struct {
+	target    http.ResponseWriter
+	converter StreamConverter
+	flushed   bool
+}
+
+func newConvertingResponseWriter(target http.ResponseWriter, converter StreamConverter) *convertingResponseWriter {
+	return &convertingResponseWriter{
+		target:    target,
+		converter: converter,
+	}
+}
+
+func (w *convertingResponseWriter) Header() http.Header {
+	return w.target.Header()
+}
+
+func (w *convertingResponseWriter) WriteHeader(statusCode int) {
+	w.target.WriteHeader(statusCode)
+}
+
+func (w *convertingResponseWriter) Write(p []byte) (int, error) {
+	if w.converter == nil {
+		return w.target.Write(p)
+	}
+
+	// 转换数据
+	converted, _, err := w.converter.ConvertChunk(p)
+	if err != nil {
+		// 转换失败时原样输出
+		return w.target.Write(p)
+	}
+
+	if len(converted) > 0 {
+		_, writeErr := w.target.Write(converted)
+		return len(p), writeErr // 返回原始长度，因为这是对上层的数据量承诺
+	}
+
+	return len(p), nil // 返回原始长度，转换后为空则不写入
+}
+
+func (w *convertingResponseWriter) Flush() {
+	if flusher, ok := w.target.(http.Flusher); ok {
+		flusher.Flush()
+	}
 }
