@@ -1691,3 +1691,246 @@ function addCommonModels() {
     window.showSuccess(window.t('channels.addedCommonModels', { count: addedCount }));
   }
 }
+
+// ============================================================================
+// UA 配置模态框
+// ============================================================================
+
+let currentUAConfigChannelId = null;
+let uaItems = [];
+let uaHeaders = [];
+
+function openUAConfigModal(channelId) {
+  currentUAConfigChannelId = channelId;
+  const channel = channels.find(c => c.id === channelId);
+  if (!channel) {
+    if (window.showError) window.showError('Channel not found');
+    return;
+  }
+
+  // 加载当前 UA 配置
+  loadUAConfig(channel);
+
+  // 显示模态框
+  const modal = document.getElementById('uaConfigModal');
+  if (modal) {
+    modal.classList.add('show');
+    // 翻译动态内容
+    if (window.i18n && window.i18n.translatePage) {
+      window.i18n.translatePage();
+    }
+  }
+}
+
+function closeUAConfigModal() {
+  const modal = document.getElementById('uaConfigModal');
+  if (modal) {
+    modal.classList.remove('show');
+  }
+  currentUAConfigChannelId = null;
+  uaItems = [];
+  uaHeaders = [];
+}
+
+function loadUAConfig(channel) {
+  // 解析现有 UA 配置（如果有的话）
+  // 目前从旧字段迁移：ua_override, ua_prefix, ua_suffix
+  uaItems = [];
+  uaHeaders = [];
+
+  const modeSelect = document.getElementById('uaConfigMode');
+  if (!modeSelect) return;
+
+  // 根据旧配置推断模式
+  if (channel.ua_override) {
+    modeSelect.value = 'override';
+    uaItems.push({ key: 'User-Agent', value: channel.ua_override });
+  } else if (channel.ua_prefix || channel.ua_suffix) {
+    modeSelect.value = 'append';
+    if (channel.ua_prefix) {
+      uaItems.push({ key: 'Prefix', value: channel.ua_prefix });
+    }
+    if (channel.ua_suffix) {
+      uaItems.push({ key: 'Suffix', value: channel.ua_suffix });
+    }
+  } else {
+    modeSelect.value = 'passthrough';
+  }
+
+  syncUAConfigUI();
+}
+
+function syncUAConfigUI() {
+  const mode = document.getElementById('uaConfigMode')?.value || 'passthrough';
+  const itemsContainer = document.getElementById('uaItemsContainer');
+  const headersContainer = document.getElementById('uaHeadersContainer');
+
+  // 控制显示/隐藏
+  if (itemsContainer) {
+    itemsContainer.classList.toggle('hidden', mode === 'passthrough' || mode === 'headers');
+  }
+  if (headersContainer) {
+    headersContainer.classList.toggle('hidden', mode !== 'headers');
+  }
+
+  // 渲染列表
+  renderUAItems();
+  renderUAHeaders();
+}
+
+function renderUAItems() {
+  const list = document.getElementById('uaItemsList');
+  if (!list) return;
+
+  if (uaItems.length === 0) {
+    list.innerHTML = '<div class="ua-empty-hint" style="color: var(--gray-400); padding: 8px 0;">No fields configured</div>';
+    return;
+  }
+
+  list.innerHTML = uaItems.map((item, index) => `
+    <div class="ua-item-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+      <input type="text" class="form-input ua-item-key" placeholder="Field name" value="${escapeHtml(item.key)}" data-index="${index}" style="flex: 1;">
+      <input type="text" class="form-input ua-item-value" placeholder="Value" value="${escapeHtml(item.value)}" data-index="${index}" style="flex: 2;">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeUAItem(${index})" title="Remove">×</button>
+    </div>
+  `).join('');
+}
+
+function renderUAHeaders() {
+  const list = document.getElementById('uaHeadersList');
+  if (!list) return;
+
+  if (uaHeaders.length === 0) {
+    list.innerHTML = '<div class="ua-empty-hint" style="color: var(--gray-400); padding: 8px 0;">No headers configured</div>';
+    return;
+  }
+
+  list.innerHTML = uaHeaders.map((header, index) => `
+    <div class="ua-header-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+      <input type="text" class="form-input ua-header-key" placeholder="Header name" value="${escapeHtml(header.key)}" data-index="${index}" style="flex: 1;">
+      <input type="text" class="form-input ua-header-value" placeholder="Value" value="${escapeHtml(header.value)}" data-index="${index}" style="flex: 2;">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeUAHeader(${index})" title="Remove">×</button>
+    </div>
+  `).join('');
+}
+
+function addUAItem() {
+  uaItems.push({ key: '', value: '' });
+  renderUAItems();
+}
+
+function removeUAItem(index) {
+  uaItems.splice(index, 1);
+  renderUAItems();
+}
+
+function addUAHeader() {
+  uaHeaders.push({ key: '', value: '' });
+  renderUAHeaders();
+}
+
+function removeUAHeader(index) {
+  uaHeaders.splice(index, 1);
+  renderUAHeaders();
+}
+
+function collectUAConfig() {
+  const mode = document.getElementById('uaConfigMode')?.value || 'passthrough';
+
+  // 收集字段
+  const items = [];
+  document.querySelectorAll('.ua-item-row').forEach(row => {
+    const keyInput = row.querySelector('.ua-item-key');
+    const valueInput = row.querySelector('.ua-item-value');
+    if (keyInput && valueInput && (keyInput.value.trim() || valueInput.value.trim())) {
+      items.push({ key: keyInput.value.trim(), value: valueInput.value.trim() });
+    }
+  });
+
+  // 收集请求头
+  const headers = [];
+  document.querySelectorAll('.ua-header-row').forEach(row => {
+    const keyInput = row.querySelector('.ua-header-key');
+    const valueInput = row.querySelector('.ua-header-value');
+    if (keyInput && valueInput && (keyInput.value.trim() || valueInput.value.trim())) {
+      headers.push({ key: keyInput.value.trim(), value: valueInput.value.trim() });
+    }
+  });
+
+  return { mode, items, headers };
+}
+
+async function saveUAConfig() {
+  if (!currentUAConfigChannelId) return;
+
+  const config = collectUAConfig();
+
+  // 转换为后端格式（兼容旧字段）
+  let uaRewriteEnabled = false;
+  let uaOverride = '';
+  let uaPrefix = '';
+  let uaSuffix = '';
+
+  if (config.mode === 'override') {
+    uaRewriteEnabled = true;
+    const uaItem = config.items.find(i => i.key.toLowerCase() === 'user-agent');
+    uaOverride = uaItem ? uaItem.value : '';
+  } else if (config.mode === 'append') {
+    uaRewriteEnabled = true;
+    const prefixItem = config.items.find(i => i.key.toLowerCase() === 'prefix');
+    const suffixItem = config.items.find(i => i.key.toLowerCase() === 'suffix');
+    uaPrefix = prefixItem ? prefixItem.value : '';
+    uaSuffix = suffixItem ? suffixItem.value : '';
+  }
+
+  try {
+    const resp = await fetchAPIWithAuth(`/admin/channels/${currentUAConfigChannelId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ua_rewrite_enabled: uaRewriteEnabled,
+        ua_override: uaOverride,
+        ua_prefix: uaPrefix,
+        ua_suffix: uaSuffix
+      })
+    });
+
+    if (!resp.success) throw new Error(resp.error || window.t('common.failed'));
+
+    closeUAConfigModal();
+    clearChannelsCache();
+    await loadChannels(filters.channelType);
+    if (window.showSuccess) window.showSuccess('UA configuration saved');
+  } catch (e) {
+    console.error('Save UA config failed', e);
+    if (window.showError) window.showError(window.t('common.failed'));
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// 绑定 UA 模态框事件
+document.addEventListener('DOMContentLoaded', () => {
+  // UA 配置模式切换
+  const modeSelect = document.getElementById('uaConfigMode');
+  if (modeSelect) {
+    modeSelect.addEventListener('change', syncUAConfigUI);
+  }
+
+  // 关闭按钮
+  document.querySelectorAll('[data-action="close-ua-modal"]').forEach(btn => {
+    btn.addEventListener('click', closeUAConfigModal);
+  });
+
+  // 添加字段/请求头
+  document.querySelector('[data-action="add-ua-item"]')?.addEventListener('click', addUAItem);
+  document.querySelector('[data-action="add-ua-header"]')?.addEventListener('click', addUAHeader);
+
+  // 保存
+  document.querySelector('[data-action="save-ua-config"]')?.addEventListener('click', saveUAConfig);
+});
