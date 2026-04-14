@@ -679,6 +679,29 @@ func (s *Server) getModelsByChannelType(ctx context.Context, channelType string)
 	return models, nil
 }
 
+// getAllModels 获取所有启用渠道的模型列表（用于协议适配器模式）
+func (s *Server) getAllModels(ctx context.Context) ([]string, error) {
+	// 查询所有启用状态的渠道
+	channels, err := s.store.ListConfigs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	modelSet := make(map[string]struct{})
+	for _, cfg := range channels {
+		if !cfg.Enabled {
+			continue
+		}
+		for _, modelName := range cfg.GetModels() {
+			modelSet[modelName] = struct{}{}
+		}
+	}
+	models := make([]string, 0, len(modelSet))
+	for name := range modelSet {
+		models = append(models, name)
+	}
+	return models, nil
+}
+
 // HandleChannelKeys 获取渠道的所有API Keys
 // GET /admin/channels/:id/keys
 func (s *Server) HandleChannelKeys(c *gin.Context) {
