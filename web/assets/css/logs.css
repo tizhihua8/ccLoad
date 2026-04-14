@@ -402,6 +402,10 @@
         order: 6;
       }
 
+      .logs-table .logs-col-ua {
+        order: 6;
+      }
+
       .logs-table .logs-col-timing {
         order: 7;
       }
@@ -442,6 +446,7 @@
       .logs-table .logs-col-model,
       .logs-table .logs-col-api-key,
       .logs-table .logs-col-ip,
+      .logs-table .logs-col-ua,
       .logs-table .logs-col-timing,
       .logs-table .logs-col-speed,
       .logs-table .logs-col-input,
@@ -463,6 +468,7 @@
       .logs-table .logs-col-model::before,
       .logs-table .logs-col-api-key::before,
       .logs-table .logs-col-ip::before,
+      .logs-table .logs-col-ua::before,
       .logs-table .logs-col-timing::before,
       .logs-table .logs-col-speed::before,
       .logs-table .logs-col-input::before,
@@ -602,13 +608,21 @@
 
     .logs-table th:nth-child(3),
     .logs-table td:nth-child(3) {
+      width: 100px;
+      /* UA */
+      min-width: 100px;
+      max-width: 150px;
+    }
+
+    .logs-table th:nth-child(4),
+    .logs-table td:nth-child(4) {
       width: 120px;
       /* API Key: xxxx...xxxx */
       min-width: 120px;
     }
 
-    .logs-table th:nth-child(6),
-    .logs-table td:nth-child(6) {
+    .logs-table th:nth-child(7),
+    .logs-table td:nth-child(7) {
       width: 60px;
       /* 状态码: 200/403/500 */
       min-width: 60px;
@@ -616,8 +630,8 @@
       text-align: center;
     }
 
-    .logs-table th:nth-child(12),
-    .logs-table td:nth-child(12) {
+    .logs-table th:nth-child(13),
+    .logs-table td:nth-child(13) {
       width: 70px;
       /* 成本 */
       min-width: 70px;
