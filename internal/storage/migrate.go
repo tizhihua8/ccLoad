@@ -220,6 +220,9 @@ func ensureLogsNewColumns(ctx context.Context, db *sql.DB, dialect Dialect) erro
 		if err := ensureLogsServiceTierMySQL(ctx, db); err != nil {
 			return err
 		}
+		if err := ensureLogsClientUAMySQL(ctx, db); err != nil {
+			return err
+		}
 		return ensureLogsLogSourceMySQL(ctx, db)
 	}
 	// SQLite: 使用PRAGMA table_info检查列
@@ -293,6 +296,7 @@ func ensureLogsColumnsSQLite(ctx context.Context, db *sql.DB) error {
 		{name: "api_key_hash", definition: "TEXT NOT NULL DEFAULT ''"}, // API Key SHA256（用于精确定位 key_index）
 		{name: "base_url", definition: "TEXT NOT NULL DEFAULT ''"},     // 请求使用的上游URL（多URL场景）
 		{name: "service_tier", definition: "TEXT NOT NULL DEFAULT ''"}, // OpenAI service_tier: priority/flex
+		{name: "client_ua", definition: "TEXT NOT NULL DEFAULT ''"},    // 客户端User-Agent（新增2026-04）
 	}); err != nil {
 		return err
 	}
@@ -476,6 +480,11 @@ func ensureLogsServiceTierMySQL(ctx context.Context, db *sql.DB) error {
 
 func ensureLogsLogSourceMySQL(ctx context.Context, db *sql.DB) error {
 	return ensureMySQLColumns(ctx, db, "logs", []mysqlColumnDef{{name: "log_source", definition: "VARCHAR(32) NOT NULL DEFAULT 'proxy'"}})
+}
+
+// ensureLogsClientUAMySQL 确保logs表有client_ua字段(MySQL增量迁移,2026-04新增)
+func ensureLogsClientUAMySQL(ctx context.Context, db *sql.DB) error {
+	return ensureMySQLColumns(ctx, db, "logs", []mysqlColumnDef{{name: "client_ua", definition: "VARCHAR(500) NOT NULL DEFAULT ''"}})
 }
 
 // ensureLogsCacheFieldsMySQL 确保logs表有缓存细分字段(MySQL增量迁移,2025-12新增)
