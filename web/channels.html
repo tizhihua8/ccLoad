@@ -528,39 +528,43 @@
                   <span style="color: var(--neutral-500); font-size: 12px;">$</span>
                 </div>
               </div>
-              <div class="channel-editor-inline-field channel-editor-inline-field--ua" style="align-items: center;">
-                <label class="form-label channel-editor-inline-label" style="margin-bottom: 0;" data-i18n="channels.uaRewriteEnabled">UA覆写</label>
-                <div class="channel-editor-inline-field-input" style="display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" id="channelUARewriteEnabled" class="form-checkbox"
-                    title="启用后，下方UA覆写/前缀/后缀才生效">
-                  <span data-i18n="channels.uaRewriteEnabledHint">启用UA覆写</span>
-                </div>
-              </div>
-              <div class="channel-editor-inline-field channel-editor-inline-field--ua" title="User-Agent覆写配置">
-                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaOverride">UA覆写</label>
+              <!-- UA 配置区域 -->
+              <div class="channel-editor-inline-field channel-editor-inline-field--ua" style="flex: 0 0 auto;">
+                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaConfigMode">配置模式</label>
                 <div class="channel-editor-inline-field-input">
-                  <input type="text" id="channelUAOverride" class="form-input" value=""
-                    style="width: 140px; min-width: 140px;" data-i18n-placeholder="channels.uaOverridePlaceholder"
-                    placeholder="留空则透传客户端UA">
+                  <select id="channelUAConfigMode" class="form-input" style="width: 180px; min-width: 180px;" data-change-action="change-channel-ua-mode">
+                    <option value="passthrough" data-i18n="channels.uaModePassthrough">透传（原样传递客户端 UA）</option>
+                    <option value="override" data-i18n="channels.uaModeOverride">覆写（完全替换指定字段）</option>
+                    <option value="append" data-i18n="channels.uaModeAppend">追加（在原有 UA 前后添加）</option>
+                    <option value="headers" data-i18n="channels.uaModeHeaders">Headers（修改请求头）</option>
+                  </select>
                 </div>
               </div>
-              <div class="channel-editor-inline-field channel-editor-inline-field--ua" title="User-Agent前缀追加">
-                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaPrefix">UA前缀</label>
-                <div class="channel-editor-inline-field-input">
-                  <input type="text" id="channelUAPrefix" class="form-input" value=""
-                    style="width: 100px; min-width: 100px;" data-i18n-placeholder="channels.uaPrefixPlaceholder"
-                    placeholder="追加到原有UA前">
+              <!-- 覆写/追加模式的字段列表 -->
+              <div id="channelUAItemsContainer" class="channel-editor-inline-field channel-editor-inline-field--ua hidden" style="flex: 1 1 auto; min-width: 200px;">
+                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaItems">字段配置</label>
+                <div class="channel-editor-inline-field-input" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                  <div id="channelUAItemsList" class="ua-items-list" style="width: 100%;">
+                    <!-- 动态添加的字段行 -->
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" data-action="add-channel-ua-item" data-i18n="channels.addUAItem">添加字段</button>
                 </div>
               </div>
-              <div class="channel-editor-inline-field channel-editor-inline-field--ua" title="User-Agent后缀追加">
-                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaSuffix">UA后缀</label>
-                <div class="channel-editor-inline-field-input">
-                  <input type="text" id="channelUASuffix" class="form-input" value=""
-                    style="width: 100px; min-width: 100px;" data-i18n-placeholder="channels.uaSuffixPlaceholder"
-                    placeholder="追加到原有UA后">
+              <!-- Headers 模式的请求头列表 -->
+              <div id="channelUAHeadersContainer" class="channel-editor-inline-field channel-editor-inline-field--ua hidden" style="flex: 1 1 auto; min-width: 200px;">
+                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaHeaders">请求头配置</label>
+                <div class="channel-editor-inline-field-input" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                  <div id="channelUAHeadersList" class="ua-headers-list" style="width: 100%;">
+                    <!-- 动态添加的请求头行 -->
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" data-action="add-channel-ua-header" data-i18n="channels.addUAHeader">添加请求头</button>
                 </div>
               </div>
-              <div style="flex: 1; min-width: 0;" data-i18n="channels.uaHint">覆写优先于前缀/后缀</div>
+              <!-- 保留旧字段用于向后兼容，但隐藏 -->
+              <input type="hidden" id="channelUARewriteEnabled">
+              <input type="hidden" id="channelUAOverride">
+              <input type="hidden" id="channelUAPrefix">
+              <input type="hidden" id="channelUASuffix">
             </div>
             <div class="channel-editor-footer-actions">
               <button type="button" class="btn btn-secondary" data-action="close-channel-modal"
