@@ -13,7 +13,6 @@ on:
         default: 'manual'
 
 env:
-  GHCR_REGISTRY: ghcr.io
   DH_REGISTRY: docker.io
   DH_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/ccload
 
@@ -29,16 +28,12 @@ jobs:
           - linux/amd64
           - linux/arm64
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-          echo "IMAGE_NAME_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,13 +44,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -63,35 +51,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME_LC }}
-            ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
-
-      - name: Build and push by digest (GHCR)
-        id: build-ghcr
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME_LC }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
-          cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }},mode=max
-          build-args: |
-            VERSION=${{ github.ref_name }}
-            COMMIT=${{ github.sha }}
-
-      - name: Build and push by digest (Docker Hub)
-        id: build-dh
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
           cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }},mode=max
@@ -101,95 +66,31 @@ jobs:
 
       - name: Export digest
         run: |
-          mkdir -p /tmp/digests-ghcr /tmp/digests-dh
-          digest="${{ steps.build-ghcr.outputs.digest }}"
-          touch "/tmp/digests-ghcr/${digest#sha256:}"
-          digest="${{ steps.build-dh.outputs.digest }}"
-          touch "/tmp/digests-dh/${digest#sha256:}"
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
 
-      - name: Upload digest (GHCR)
+      - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-ghcr-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests-ghcr/*
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Upload digest (Docker Hub)
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-dh-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests-dh/*
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
 
   # ============================================
-  # 阶段2: 合并多架构 manifest (GHCR)
+  # 阶段2: 合并多架构 manifest
   # ============================================
-  merge-ghcr:
+  merge:
     runs-on: ubuntu-latest
     needs: build
-    permissions:
-      contents: read
-      packages: write
 
-    steps:
-      - name: Prepare
-        run: |
-          echo "IMAGE_NAME_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          path: /tmp/digests-ghcr
-          pattern: digests-ghcr-*
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME_LC }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
-            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}
-
-      - name: Create manifest list
-        working-directory: /tmp/digests-ghcr
-        run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME_LC }}@sha256:%s ' *)
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.meta.outputs.version }}
-
-  # ============================================
-  # 阶段2: 合并多架构 manifest (Docker Hub)
-  # ============================================
-  merge-dh:
-    runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
-          path: /tmp/digests-dh
-          pattern: digests-dh-*
+          path: /tmp/digests
+          pattern: digests-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
@@ -215,7 +116,7 @@ jobs:
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}
 
       - name: Create manifest list
-        working-directory: /tmp/digests-dh
+        working-directory: /tmp/digests
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
