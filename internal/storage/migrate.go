@@ -1443,14 +1443,11 @@ func ensureChannelsUAOverride(ctx context.Context, db *sql.DB, dialect Dialect) 
 }
 
 // ensureChannelsUAConfig 添加渠道 UA 配置 JSON 字段（支持复杂 UA 覆写配置）
+// MySQL: TEXT 不能有默认值，使用可为空的列，nil 表示未启用
+// SQLite: 同样使用可为空的 TEXT
 func ensureChannelsUAConfig(ctx context.Context, db *sql.DB, dialect Dialect) error {
 	colName := "ua_config"
-	var colDef string
-	if dialect == DialectMySQL {
-		colDef = "TEXT NOT NULL DEFAULT ''"
-	} else {
-		colDef = "TEXT NOT NULL DEFAULT ''"
-	}
+	colDef := "TEXT" // 可为空，无默认值
 
 	if dialect == DialectMySQL {
 		var count int

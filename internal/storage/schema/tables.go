@@ -18,7 +18,7 @@ func DefineChannelsTable() *TableBuilder {
 		Column("ua_override VARCHAR(512) NOT NULL DEFAULT ''").
 		Column("ua_prefix VARCHAR(256) NOT NULL DEFAULT ''").
 		Column("ua_suffix VARCHAR(256) NOT NULL DEFAULT ''").
-		Column("ua_config TEXT NOT NULL DEFAULT ''").
+		Column("ua_config TEXT").
 		Column("created_at BIGINT NOT NULL").
 		Column("updated_at BIGINT NOT NULL").
 		Index("idx_channels_enabled", "enabled").
