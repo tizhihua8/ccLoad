@@ -115,6 +115,7 @@ function getLogMobileLabels() {
   return {
     time: escapeHtml(t('logs.colTime')),
     ip: escapeHtml(t('logs.colIP')),
+    ua: escapeHtml(t('logs.colUA')),
     apiKey: escapeHtml(t('logs.colApiKey')),
     channel: escapeHtml(t('logs.colChannel')),
     model: escapeHtml(t('common.model')),
@@ -411,7 +412,7 @@ function getTableColspan() {
   const table = document.getElementById('tbody')?.closest('table')
     || document.querySelector('.logs-table');
   const headerCells = table ? table.querySelectorAll('thead th') : [];
-  return headerCells.length || 14; // fallback到14列（日志页默认列数）
+  return headerCells.length || 15; // fallback到15列（日志页默认列数）
 }
 
 function renderLogsLoading() {
@@ -452,6 +453,11 @@ function renderLogs(data) {
     // 0. 客户端IP显示（掩码处理，hover显示完整IP）
     const clientIPDisplay = entry.client_ip ?
       `<span title="${escapeHtml(entry.client_ip)}">${escapeHtml(maskIP(entry.client_ip))}</span>` :
+      '<span style="color: var(--neutral-400);">-</span>';
+
+    // 0.1 客户端UA显示（截断显示，hover显示完整UA）
+    const clientUADisplay = entry.client_ua ?
+      `<span title="${escapeHtml(entry.client_ua)}" class="logs-mono-text">${escapeHtml(entry.client_ua.length > 20 ? entry.client_ua.slice(0, 20) + '...' : entry.client_ua)}</span>` :
       '<span style="color: var(--neutral-400);">-</span>';
 
     // 1. 渠道信息显示（鼠标移上去时显示URL）
@@ -585,6 +591,7 @@ function renderLogs(data) {
     htmlParts[i] = `<tr class="mobile-card-row logs-table-row">
           <td class="logs-col-time" data-mobile-label="${logMobileLabels.time}" style="white-space: nowrap;">${formatTime(entry.time)}</td>
           <td class="logs-col-ip logs-mono-text" data-mobile-label="${logMobileLabels.ip}" style="white-space: nowrap;">${clientIPDisplay}</td>
+          <td class="logs-col-ua logs-mono-text" data-mobile-label="${logMobileLabels.ua}" style="white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${clientUADisplay}</td>
           <td class="logs-col-api-key" data-mobile-label="${logMobileLabels.apiKey}" style="text-align: center; white-space: nowrap;">${apiKeyDisplay}</td>
           <td class="logs-col-channel" data-mobile-label="${logMobileLabels.channel}">${configDisplay}</td>
           <td class="logs-col-model" data-mobile-label="${logMobileLabels.model}">${modelDisplay}</td>

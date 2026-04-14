@@ -663,6 +663,7 @@ window.I18N_LOCALES['en'] = {
   'logs.recordsSuffix': '',
   'logs.colTime': 'Time',
   'logs.colIP': 'IP',
+  'logs.colUA': 'UA',
   'logs.colApiKey': 'API Key',
   'logs.colChannel': 'Channel',
   'logs.colTiming': 'TTFT/Duration(s)',
