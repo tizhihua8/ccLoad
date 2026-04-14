@@ -39,9 +39,17 @@ func (s *Server) selectCandidatesByChannelType(ctx context.Context, channelType 
 func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model string, channelType string) ([]*modelpkg.Config, error) {
 	normalizedType := util.NormalizeChannelType(channelType)
 
+	// 检查协议适配器是否启用且允许跨协议
+	crossProtocolEnabled := s.protocolAdapter != nil && s.protocolAdapter.IsEnabled()
+
 	// 类型过滤辅助函数
+	// 当协议适配器启用时，允许跨协议匹配（不限于同类型渠道）
 	filterByType := func(channels []*modelpkg.Config) []*modelpkg.Config {
 		if channelType == "" {
+			return channels
+		}
+		// 协议适配器启用时，不进行类型过滤，允许跨协议匹配
+		if crossProtocolEnabled {
 			return channels
 		}
 		filtered := make([]*modelpkg.Config, 0, len(channels))
@@ -53,14 +61,13 @@ func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model strin
 		return filtered
 	}
 
-	// 优先走索引查询
+	// 优先走索引查询（只按模型匹配，不分协议类型）
 	channels, err := s.GetEnabledChannelsByModel(ctx, model)
 	if err != nil {
 		return nil, err
 	}
 
-	// [FIX] 在判断是否回退前，先应用 channelType 过滤
-	// 否则精确匹配到一个 openai 渠道会阻止回退到 anthropic 渠道
+	// [FIX] 协议适配器启用时，允许跨协议匹配，不进行类型过滤
 	channels = filterByType(channels)
 
 	// 先做冷却/成本过滤，但不触发“全冷却兜底”，以便后续还能继续做模糊匹配回退。
@@ -86,7 +93,8 @@ func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model strin
 			if cfg == nil || !cfg.Enabled {
 				continue
 			}
-			if channelType != "" && cfg.GetChannelType() != normalizedType {
+			// 协议适配器启用时，不进行类型过滤
+			if channelType != "" && cfg.GetChannelType() != normalizedType && !crossProtocolEnabled {
 				continue
 			}
 			if s.configSupportsModelWithFuzzyMatch(cfg, model) {
