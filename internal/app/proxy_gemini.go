@@ -65,12 +65,23 @@ func detectModelsChannelType(c *gin.Context) string {
 	return "openai"
 }
 
-// handleListOpenAIModels 处理 GET /v1/models 请求，根据请求类型返回对应渠道的模型列表
+// handleListOpenAIModels 处理 GET /v1/models 请求
+// 当协议适配器启用时，返回所有渠道的模型（支持跨协议）
 func (s *Server) handleListOpenAIModels(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	channelType := detectModelsChannelType(c)
-	models, err := s.getModelsByChannelType(ctx, channelType)
+	var models []string
+	var err error
+
+	// 协议适配器启用时，返回所有渠道的模型（通用模式）
+	if s.protocolAdapter != nil && s.protocolAdapter.IsEnabled() {
+		models, err = s.getAllModels(ctx)
+	} else {
+		// 传统模式：只返回同协议渠道的模型
+		channelType := detectModelsChannelType(c)
+		models, err = s.getModelsByChannelType(ctx, channelType)
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load models"})
 		return
