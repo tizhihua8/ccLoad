@@ -12,7 +12,7 @@ import (
 
 const (
 	// GitHub API 地址
-	githubReleaseAPI = "https://api.github.com/repos/caidaoli/ccLoad/releases/latest"
+	githubReleaseAPI = "https://api.github.com/repos/tizhihua8/ccLoad/releases/latest"
 	// 检测间隔
 	checkInterval = 4 * time.Hour
 	// 请求超时

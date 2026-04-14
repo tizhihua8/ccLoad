@@ -16,7 +16,7 @@ const banner = `
  ╚═════╝  ╚═════╝ ╚══════╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
 `
 
-const repoURL = "https://github.com/caidaoli/ccLoad"
+const repoURL = "https://github.com/tizhihua8/ccLoad"
 
 // ANSI 颜色码
 const (

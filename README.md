@@ -146,18 +146,18 @@ graph TB
 **使用预构建镜像（推荐）**：
 ```bash
 # 方式 1: 使用 docker-compose（最简单）
-curl -o docker-compose.yml https://raw.githubusercontent.com/caidaoli/ccLoad/master/docker-compose.yml
-curl -o .env https://raw.githubusercontent.com/caidaoli/ccLoad/master/.env.example
+curl -o docker-compose.yml https://raw.githubusercontent.com/tizhihua8/ccLoad/master/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/tizhihua8/ccLoad/master/.env.example
 # 编辑 .env 文件设置密码
 docker-compose up -d
 
 # 方式 2: 直接运行镜像
-docker pull ghcr.io/caidaoli/ccload:latest
+docker pull ghcr.io/tizhihua8/ccload:latest
 docker run -d --name ccload \
   -p 8080:8080 \
   -e CCLOAD_PASS=your_secure_password \
   -v ccload_data:/app/data \
-  ghcr.io/caidaoli/ccload:latest
+  ghcr.io/tizhihua8/ccload:latest
 ```
 
 **从源码构建**：
@@ -165,7 +165,7 @@ docker run -d --name ccload \
 想自己编译镜像？也行，适合对官方镜像不放心的同学👇
 ```bash
 # 克隆项目
-git clone https://github.com/caidaoli/ccLoad.git
+git clone https://github.com/tizhihua8/ccLoad.git
 cd ccLoad
 
 # 使用 docker-compose 构建并运行
@@ -186,7 +186,7 @@ docker run -d --name ccload \
 
 ```bash
 # 克隆项目
-git clone https://github.com/caidaoli/ccLoad.git
+git clone https://github.com/tizhihua8/ccLoad.git
 cd ccLoad
 
 # 构建项目（默认使用高性能 JSON 库）
@@ -207,7 +207,7 @@ make dev
 
 ```bash
 # 从 GitHub Releases 下载对应平台的二进制文件
-wget https://github.com/caidaoli/ccLoad/releases/latest/download/ccload-linux-amd64
+wget https://github.com/tizhihua8/ccLoad/releases/latest/download/ccload-linux-amd64
 chmod +x ccload-linux-amd64
 ./ccload-linux-amd64
 ```
@@ -236,7 +236,7 @@ chmod +x ccload-linux-amd64
    在 Space 仓库中创建 `Dockerfile` 文件，内容如下：
 
    ```dockerfile
-   FROM ghcr.io/caidaoli/ccload:latest
+   FROM ghcr.io/tizhihua8/ccload:latest
    ENV TZ=Asia/Shanghai
    ENV PORT=7860
    ENV SQLITE_PATH=/tmp/ccload.db
@@ -260,7 +260,7 @@ chmod +x ccload-linux-amd64
 
    # 创建 Dockerfile
    cat > Dockerfile << 'EOF'
-   FROM ghcr.io/caidaoli/ccload:latest
+   FROM ghcr.io/tizhihua8/ccload:latest
    ENV TZ=Asia/Shanghai
    ENV PORT=7860
    ENV SQLITE_PATH=/tmp/ccload.db
@@ -334,7 +334,7 @@ chmod +x ccload-linux-amd64
 
 **Dockerfile 示例（混合模式）**:
 ```dockerfile
-FROM ghcr.io/caidaoli/ccload:latest
+FROM ghcr.io/tizhihua8/ccload:latest
 ENV TZ=Asia/Shanghai
 ENV PORT=7860
 # Secrets 中配置: CCLOAD_MYSQL + CCLOAD_ENABLE_SQLITE_REPLICA=1
@@ -361,7 +361,7 @@ EXPOSE 7860
 
 **Dockerfile 示例（纯 MySQL）**:
 ```dockerfile
-FROM ghcr.io/caidaoli/ccload:latest
+FROM ghcr.io/tizhihua8/ccload:latest
 ENV TZ=Asia/Shanghai
 ENV PORT=7860
 # 不需要 SQLITE_PATH，使用 CCLOAD_MYSQL 环境变量
@@ -378,7 +378,7 @@ EXPOSE 7860
 由于使用预构建镜像，更新非常简单：
 
 **自动更新**:
-- 当官方发布新版本镜像（`ghcr.io/caidaoli/ccload:latest`）时
+- 当官方发布新版本镜像（`ghcr.io/tizhihua8/ccload:latest`）时
 - 在 Space 设置中点击 "Factory rebuild" 即可自动拉取最新镜像
 - 或等待 Hugging Face 自动重启（通常 48 小时后）
 
@@ -392,7 +392,7 @@ git push
 **版本锁定**（可选）:
 如果需要锁定特定版本，修改 Dockerfile：
 ```dockerfile
-FROM ghcr.io/caidaoli/ccload:v1.85.4  # 指定版本号
+FROM ghcr.io/tizhihua8/ccload:v1.85.4  # 指定版本号
 ENV TZ=Asia/Shanghai
 ENV PORT=7860
 ENV SQLITE_PATH=/tmp/ccload.db
@@ -464,7 +464,7 @@ services:
       retries: 5
 
   ccload:
-    image: ghcr.io/caidaoli/ccload:latest
+    image: ghcr.io/tizhihua8/ccload:latest
     environment:
       CCLOAD_PASS: your_admin_password
       CCLOAD_MYSQL: "ccload:ccloadpass@tcp(mysql:3306)/ccload?charset=utf8mb4"
@@ -486,7 +486,7 @@ docker run -d --name ccload \
   -p 8080:8080 \
   -e CCLOAD_PASS=your_admin_password \
   -e CCLOAD_MYSQL="user:pass@tcp(mysql_host:3306)/ccload?charset=utf8mb4" \
-  ghcr.io/caidaoli/ccload:latest
+  ghcr.io/tizhihua8/ccload:latest
 ```
 
 服务启动后访问：
@@ -861,7 +861,7 @@ export CCLOAD_SQLITE_LOG_DAYS=7  # 恢复最近 7 天日志（可选）
 多架构镜像都准备好了，amd64/arm64随便选👇
 
 - **支持架构**：`linux/amd64`, `linux/arm64`
-- **镜像仓库**：`ghcr.io/caidaoli/ccload`
+- **镜像仓库**：`ghcr.io/tizhihua8/ccload`
 - **可用标签**：
   - `latest` - 最新稳定版本
   - `v1.85.4` - 具体版本号
@@ -872,14 +872,14 @@ export CCLOAD_SQLITE_LOG_DAYS=7  # 恢复最近 7 天日志（可选）
 
 ```bash
 # 拉取最新版本
-docker pull ghcr.io/caidaoli/ccload:latest
+docker pull ghcr.io/tizhihua8/ccload:latest
 
 # 拉取指定版本
-docker pull ghcr.io/caidaoli/ccload:v1.85.4
+docker pull ghcr.io/tizhihua8/ccload:v1.85.4
 
 # 指定架构（Docker 通常自动选择）
-docker pull --platform linux/amd64 ghcr.io/caidaoli/ccload:latest
-docker pull --platform linux/arm64 ghcr.io/caidaoli/ccload:latest
+docker pull --platform linux/amd64 ghcr.io/tizhihua8/ccload:latest
+docker pull --platform linux/arm64 ghcr.io/tizhihua8/ccload:latest
 ```
 
 ### 数据库结构
@@ -1012,7 +1012,7 @@ GitHub Actions全自动化，推个tag就能发版👇
 
 欢迎贡献代码！发现Bug或有新想法？来提Issue或PR吧👇
 
-- 提Issue：https://github.com/caidaoli/ccLoad/issues
+- 提Issue：https://github.com/tizhihua8/ccLoad/issues
 - 提PR：Fork项目→改代码→提交PR
 - 代码规范：遵循项目现有风格，保持KISS原则
 

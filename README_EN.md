@@ -134,24 +134,24 @@ Choose the deployment method that suits you best:
 **Using pre-built images (Recommended)**:
 ```bash
 # Option 1: Using docker-compose (Simplest)
-curl -o docker-compose.yml https://raw.githubusercontent.com/caidaoli/ccLoad/master/docker-compose.yml
-curl -o .env https://raw.githubusercontent.com/caidaoli/ccLoad/master/.env.example
+curl -o docker-compose.yml https://raw.githubusercontent.com/tizhihua8/ccLoad/master/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/tizhihua8/ccLoad/master/.env.example
 # Edit .env file to set password
 docker-compose up -d
 
 # Option 2: Run image directly
-docker pull ghcr.io/caidaoli/ccload:latest
+docker pull ghcr.io/tizhihua8/ccload:latest
 docker run -d --name ccload \
   -p 8080:8080 \
   -e CCLOAD_PASS=your_secure_password \
   -v ccload_data:/app/data \
-  ghcr.io/caidaoli/ccload:latest
+  ghcr.io/tizhihua8/ccload:latest
 ```
 
 **Building from source**:
 ```bash
 # Clone project
-git clone https://github.com/caidaoli/ccLoad.git
+git clone https://github.com/tizhihua8/ccLoad.git
 cd ccLoad
 
 # Build and run with docker-compose
@@ -170,7 +170,7 @@ docker run -d --name ccload \
 
 ```bash
 # Clone project
-git clone https://github.com/caidaoli/ccLoad.git
+git clone https://github.com/tizhihua8/ccLoad.git
 cd ccLoad
 
 # Build project (uses high-performance JSON library by default)
@@ -189,7 +189,7 @@ make dev
 
 ```bash
 # Download binary for your platform from GitHub Releases
-wget https://github.com/caidaoli/ccLoad/releases/latest/download/ccload-linux-amd64
+wget https://github.com/tizhihua8/ccLoad/releases/latest/download/ccload-linux-amd64
 chmod +x ccload-linux-amd64
 ./ccload-linux-amd64
 ```
@@ -218,7 +218,7 @@ Hugging Face Spaces provides free container hosting with Docker support, ideal f
    Create a `Dockerfile` in the Space repository:
 
    ```dockerfile
-   FROM ghcr.io/caidaoli/ccload:latest
+   FROM ghcr.io/tizhihua8/ccload:latest
    ENV TZ=Asia/Shanghai
    ENV PORT=7860
    ENV SQLITE_PATH=/tmp/ccload.db
@@ -242,7 +242,7 @@ Hugging Face Spaces provides free container hosting with Docker support, ideal f
 
    # Create Dockerfile
    cat > Dockerfile << 'EOF'
-   FROM ghcr.io/caidaoli/ccload:latest
+   FROM ghcr.io/tizhihua8/ccload:latest
    ENV TZ=Asia/Shanghai
    ENV PORT=7860
    ENV SQLITE_PATH=/tmp/ccload.db
@@ -313,7 +313,7 @@ Due to Hugging Face Spaces limitations (`/tmp` directory clears on restart), **w
 
 **Dockerfile Example (Hybrid Mode)**:
 ```dockerfile
-FROM ghcr.io/caidaoli/ccload:latest
+FROM ghcr.io/tizhihua8/ccload:latest
 ENV TZ=Asia/Shanghai
 ENV PORT=7860
 # Configure in Secrets: CCLOAD_MYSQL + CCLOAD_ENABLE_SQLITE_REPLICA=1
@@ -340,7 +340,7 @@ EXPOSE 7860
 
 **Dockerfile Example (Pure MySQL)**:
 ```dockerfile
-FROM ghcr.io/caidaoli/ccload:latest
+FROM ghcr.io/tizhihua8/ccload:latest
 ENV TZ=Asia/Shanghai
 ENV PORT=7860
 # No SQLITE_PATH needed, uses CCLOAD_MYSQL environment variable
@@ -357,7 +357,7 @@ EXPOSE 7860
 With pre-built images, updates are simple:
 
 **Auto Update**:
-- When new version image (`ghcr.io/caidaoli/ccload:latest`) is released
+- When new version image (`ghcr.io/tizhihua8/ccload:latest`) is released
 - Click "Factory rebuild" in Space settings to pull latest image
 - Or wait for Hugging Face auto-restart (typically after 48 hours)
 
@@ -371,7 +371,7 @@ git push
 **Version Pinning** (Optional):
 To lock specific version, modify Dockerfile:
 ```dockerfile
-FROM ghcr.io/caidaoli/ccload:v1.85.4  # Specify version
+FROM ghcr.io/tizhihua8/ccload:v1.85.4  # Specify version
 ENV TZ=Asia/Shanghai
 ENV PORT=7860
 ENV SQLITE_PATH=/tmp/ccload.db
@@ -439,7 +439,7 @@ services:
       retries: 5
 
   ccload:
-    image: ghcr.io/caidaoli/ccload:latest
+    image: ghcr.io/tizhihua8/ccload:latest
     environment:
       CCLOAD_PASS: your_admin_password
       CCLOAD_MYSQL: "ccload:ccloadpass@tcp(mysql:3306)/ccload?charset=utf8mb4"
@@ -461,7 +461,7 @@ docker run -d --name ccload \
   -p 8080:8080 \
   -e CCLOAD_PASS=your_admin_password \
   -e CCLOAD_MYSQL="user:pass@tcp(mysql_host:3306)/ccload?charset=utf8mb4" \
-  ghcr.io/caidaoli/ccload:latest
+  ghcr.io/tizhihua8/ccload:latest
 ```
 
 After service starts, access:
@@ -811,7 +811,7 @@ Base priority order: A > B > C > D
 Project supports multi-arch Docker images:
 
 - **Supported Architectures**: `linux/amd64`, `linux/arm64`
-- **Image Registry**: `ghcr.io/caidaoli/ccload`
+- **Image Registry**: `ghcr.io/tizhihua8/ccload`
 - **Available Tags**:
   - `latest` - Latest stable version
   - `v1.85.4` - Specific version number
@@ -822,14 +822,14 @@ Project supports multi-arch Docker images:
 
 ```bash
 # Pull latest version
-docker pull ghcr.io/caidaoli/ccload:latest
+docker pull ghcr.io/tizhihua8/ccload:latest
 
 # Pull specific version
-docker pull ghcr.io/caidaoli/ccload:v1.85.4
+docker pull ghcr.io/tizhihua8/ccload:v1.85.4
 
 # Specify architecture (Docker usually auto-selects)
-docker pull --platform linux/amd64 ghcr.io/caidaoli/ccload:latest
-docker pull --platform linux/arm64 ghcr.io/caidaoli/ccload:latest
+docker pull --platform linux/amd64 ghcr.io/tizhihua8/ccload:latest
+docker pull --platform linux/arm64 ghcr.io/tizhihua8/ccload:latest
 ```
 
 ### Database Structure

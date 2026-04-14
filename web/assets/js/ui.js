@@ -189,8 +189,8 @@
   }
 
   // GitHub仓库地址
-  const GITHUB_REPO_URL = 'https://github.com/caidaoli/ccLoad';
-  const GITHUB_RELEASES_URL = 'https://github.com/caidaoli/ccLoad/releases';
+  const GITHUB_REPO_URL = 'https://github.com/tizhihua8/ccLoad';
+  const GITHUB_RELEASES_URL = 'https://github.com/tizhihua8/ccLoad/releases';
 
   // 版本信息
   let versionInfo = null;
