@@ -453,6 +453,57 @@ func replaceModelInPath(path string, originalModel string, actualModel string) s
 // 1. 精确匹配的重定向（redirect_model 配置）
 // 2. 模糊匹配（启用 model_fuzzy_match 时）
 // 3. [FIX] 2026-01: 模糊匹配结果的重定向（链式解析）
+// openAICompatUnstableParams OpenAI 兼容但部分上游不稳定的参数
+// 这些参数在某些 OpenAI 兼容上游（如 Fireworks AI）中可能导致错误
+var openAICompatUnstableParams = []string{
+	"json_mode",      // Fireworks AI 不支持
+	"service_tier",   // 部分上游不支持
+	"store",          // o1 模型特有，部分上游不支持
+	"reasoning_effort", // o1 模型特有，部分上游不支持
+}
+
+// needsOpenAICompatFiltering 检查是否需要 OpenAI 兼容参数过滤
+// 基于 URL 检测已知不支持完整 OpenAI 参数的上游
+func needsOpenAICompatFiltering(url string) bool {
+	lowerURL := strings.ToLower(url)
+	// Fireworks AI 不支持 json_mode 等参数
+	if strings.Contains(lowerURL, "fireworks.ai") {
+		return true
+	}
+	// 可以添加其他需要过滤的上游
+	// if strings.Contains(lowerURL, "xxx.com") { return true }
+	return false
+}
+
+// filterOpenAICompatParams 过滤 OpenAI 兼容但上游不支持的参数
+func filterOpenAICompatParams(body []byte, url string) []byte {
+	if !needsOpenAICompatFiltering(url) {
+		return body
+	}
+
+	var reqData map[string]json.RawMessage
+	if err := sonic.Unmarshal(body, &reqData); err != nil {
+		return body
+	}
+
+	modified := false
+	for _, param := range openAICompatUnstableParams {
+		if _, exists := reqData[param]; exists {
+			delete(reqData, param)
+			modified = true
+		}
+	}
+
+	if !modified {
+		return body
+	}
+
+	if filteredBody, err := sonic.Marshal(reqData); err == nil {
+		return filteredBody
+	}
+	return body
+}
+
 func (s *Server) prepareRequestBody(cfg *model.Config, reqCtx *proxyRequestContext) (actualModel string, bodyToSend []byte) {
 	actualModel = reqCtx.originalModel
 
@@ -496,6 +547,10 @@ func (s *Server) prepareRequestBody(cfg *model.Config, reqCtx *proxyRequestConte
 			}
 		}
 	}
+
+	// 4. [FIX] 2026-04: 过滤上游不支持的 OpenAI 特有参数
+	// 部分 OpenAI 兼容上游（如 Fireworks AI）不支持 json_mode 等参数
+	bodyToSend = filterOpenAICompatParams(bodyToSend, cfg.URL)
 
 	return actualModel, bodyToSend
 }
