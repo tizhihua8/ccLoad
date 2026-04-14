@@ -1,8 +1,6 @@
 package sql
 
 import (
-	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -115,9 +113,12 @@ func NewConfigScanner() *ConfigScanner {
 }
 
 // ScanConfig 扫描单行配置数据（不含模型数据，需要单独查询channel_models表）
-// 支持两种字段顺序：
-// 1. 包含 ua_config 的完整查询（17个字段）
-// 2. 不包含 ua_config 的旧查询（16个字段，向后兼容）
+// 字段顺序必须与 SQL 查询一致：
+// id, name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model,
+// cooldown_until, cooldown_duration_ms, daily_cost_limit,
+// ua_rewrite_enabled, ua_override, ua_prefix, ua_suffix,
+// key_count, created_at, updated_at
+// 注意：ua_config 列暂时从查询中移除，直到数据库迁移完成
 func (cs *ConfigScanner) ScanConfig(scanner interface {
 	Scan(...any) error
 }) (*model.Config, error) {
@@ -126,42 +127,22 @@ func (cs *ConfigScanner) ScanConfig(scanner interface {
 	var scheduledCheckEnabledInt int
 	var uaRewriteEnabledInt int
 	var scheduledCheckModel string
-	var uaConfigRaw sql.NullString // 用于扫描 ua_config JSON 字段
 	var createdAtRaw, updatedAtRaw any
 
-	// 尝试扫描 17 个字段（包含 ua_config）
-	// 注意：不再包含 models 和 model_redirects 字段
+	// 扫描 18 个字段（不包含 ua_config）
 	if err := scanner.Scan(&c.ID, &c.Name, &c.URL, &c.Priority,
 		&c.ChannelType, &enabledInt, &scheduledCheckEnabledInt, &scheduledCheckModel,
 		&c.CooldownUntil, &c.CooldownDurationMs, &c.DailyCostLimit,
 		&uaRewriteEnabledInt, &c.UAOverride, &c.UAPrefix, &c.UASuffix,
-		&uaConfigRaw,
 		&c.KeyCount,
 		&createdAtRaw, &updatedAtRaw); err != nil {
-		// 如果失败，尝试向后兼容扫描 16 个字段（不包含 ua_config）
-		uaConfigRaw = sql.NullString{Valid: false}
-		if err2 := scanner.Scan(&c.ID, &c.Name, &c.URL, &c.Priority,
-			&c.ChannelType, &enabledInt, &scheduledCheckEnabledInt, &scheduledCheckModel,
-			&c.CooldownUntil, &c.CooldownDurationMs, &c.DailyCostLimit,
-			&uaRewriteEnabledInt, &c.UAOverride, &c.UAPrefix, &c.UASuffix,
-			&c.KeyCount,
-			&createdAtRaw, &updatedAtRaw); err2 != nil {
-			return nil, err // 返回原始错误
-		}
+		return nil, err
 	}
 
 	c.Enabled = enabledInt != 0
 	c.ScheduledCheckEnabled = scheduledCheckEnabledInt != 0
 	c.UARewriteEnabled = uaRewriteEnabledInt != 0
 	c.ScheduledCheckModel = scheduledCheckModel
-
-	// 解析 UAConfig JSON
-	if uaConfigRaw.Valid && uaConfigRaw.String != "" {
-		var uaConfig model.UAConfig
-		if err := json.Unmarshal([]byte(uaConfigRaw.String), &uaConfig); err == nil {
-			c.UAConfig = &uaConfig
-		}
-	}
 
 	// 转换时间戳（支持不同数据库）
 	now := time.Now()
