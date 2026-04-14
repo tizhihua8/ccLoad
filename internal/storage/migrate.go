@@ -195,7 +195,9 @@ func hasSystemSetting(ctx context.Context, db *sql.DB, dialect Dialect, key stri
 
 // ensureLogsNewColumns 确保logs表有新增字段(2025-12新增,支持MySQL和SQLite)
 func ensureLogsNewColumns(ctx context.Context, db *sql.DB, dialect Dialect) error {
+	log.Printf("[MIGRATE] ensureLogsNewColumns started, dialect=%d", dialect)
 	if dialect == DialectMySQL {
+		log.Printf("[MIGRATE] MySQL path: checking columns...")
 		if err := ensureLogsMinuteBucketMySQL(ctx, db); err != nil {
 			return err
 		}
@@ -220,12 +222,15 @@ func ensureLogsNewColumns(ctx context.Context, db *sql.DB, dialect Dialect) erro
 		if err := ensureLogsServiceTierMySQL(ctx, db); err != nil {
 			return err
 		}
+		log.Printf("[MIGRATE] About to call ensureLogsClientUAMySQL...")
 		if err := ensureLogsClientUAMySQL(ctx, db); err != nil {
 			return err
 		}
+		log.Printf("[MIGRATE] About to call ensureLogsLogSourceMySQL...")
 		return ensureLogsLogSourceMySQL(ctx, db)
 	}
 	// SQLite: 使用PRAGMA table_info检查列
+	log.Printf("[MIGRATE] SQLite path...")
 	return ensureLogsColumnsSQLite(ctx, db)
 }
 
@@ -262,17 +267,24 @@ type mysqlColumnDef struct {
 func ensureMySQLColumns(ctx context.Context, db *sql.DB, table string, cols []mysqlColumnDef) error {
 	added := false
 	for _, col := range cols {
+		log.Printf("[MIGRATE] Checking column %s.%s...", table, col.name)
 		var count int
 		if err := db.QueryRowContext(ctx,
 			"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?",
 			table, col.name,
 		).Scan(&count); err != nil {
+			log.Printf("[ERROR] Failed to check column %s.%s: %v", table, col.name, err)
 			return fmt.Errorf("check %s field: %w", col.name, err)
 		}
+		log.Printf("[MIGRATE] Column %s.%s exists=%d", table, col.name, count)
 		if count == 0 {
-			if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, col.name, col.definition)); err != nil {
+			alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, col.name, col.definition)
+			log.Printf("[MIGRATE] Executing: %s", alterSQL)
+			if _, err := db.ExecContext(ctx, alterSQL); err != nil {
+				log.Printf("[ERROR] Failed to add column %s.%s: %v", table, col.name, err)
 				return fmt.Errorf("add %s column: %w", col.name, err)
 			}
+			log.Printf("[MIGRATE] Successfully added column %s.%s", table, col.name)
 			added = true
 		}
 	}
@@ -484,7 +496,14 @@ func ensureLogsLogSourceMySQL(ctx context.Context, db *sql.DB) error {
 
 // ensureLogsClientUAMySQL 确保logs表有client_ua字段(MySQL增量迁移,2026-04新增)
 func ensureLogsClientUAMySQL(ctx context.Context, db *sql.DB) error {
-	return ensureMySQLColumns(ctx, db, "logs", []mysqlColumnDef{{name: "client_ua", definition: "VARCHAR(500) NOT NULL DEFAULT ''"}})
+	log.Printf("[INFO] Checking client_ua column...")
+	err := ensureMySQLColumns(ctx, db, "logs", []mysqlColumnDef{{name: "client_ua", definition: "VARCHAR(500) NOT NULL DEFAULT ''"}})
+	if err != nil {
+		log.Printf("[ERROR] Failed to add client_ua column: %v", err)
+		return err
+	}
+	log.Printf("[INFO] client_ua column check completed")
+	return nil
 }
 
 // ensureLogsCacheFieldsMySQL 确保logs表有缓存细分字段(MySQL增量迁移,2025-12新增)
