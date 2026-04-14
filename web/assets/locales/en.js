@@ -911,10 +911,23 @@ window.I18N_LOCALES['en'] = {
   'channels.copyChannelTitle': 'Copy Channel',
   'channels.toggleEnable': 'Enable Channel',
   'channels.toggleDisable': 'Disable Channel',
+  'channels.uaConfig': 'UA Override Config',
+  'channels.uaConfigShort': 'UA',
   // Modal Titles
+  'channels.uaConfigTitle': 'UA Override Configuration',
   'channels.addChannel': 'Add Channel',
   'channels.editChannel': 'Edit Channel',
   'channels.copyChannel': 'Copy Channel',
+  // UA Config Mode
+  'channels.uaConfigMode': 'Config Mode',
+  'channels.uaModePassthrough': 'Passthrough (pass client UA as-is)',
+  'channels.uaModeOverride': 'Override (replace specified fields)',
+  'channels.uaModeAppend': 'Append (add before original UA)',
+  'channels.uaModeHeaders': 'Headers (modify request headers)',
+  'channels.uaItems': 'Field Config',
+  'channels.addUAItem': 'Add Field',
+  'channels.uaHeaders': 'Header Config',
+  'channels.addUAHeader': 'Add Header',
   // Card Display
   'channels.modelPrefix': 'Models:',
   'channels.urlLabel': 'URL:',
