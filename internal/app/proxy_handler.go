@@ -292,6 +292,7 @@ func (s *Server) HandleProxyRequest(c *gin.Context) {
 			Message:     "no available upstream (all cooled or none)",
 			IsStreaming: isStreaming,
 			ClientIP:    c.ClientIP(),
+			ClientUA:    c.Request.UserAgent(),
 		})
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no available upstream (all cooled or none)"})
 		return
@@ -390,6 +391,7 @@ func (s *Server) HandleProxyRequest(c *gin.Context) {
 			Duration:    time.Since(reqCtx.startTime).Seconds(),
 			IsStreaming: isStreaming,
 			ClientIP:    reqCtx.clientIP,
+			ClientUA:    reqCtx.clientUA,
 		})
 	}
 
