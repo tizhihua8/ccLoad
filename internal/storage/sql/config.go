@@ -100,6 +100,7 @@ func (s *SQLStore) GetEnabledChannelsByModel(ctx context.Context, modelName stri
 	            SELECT c.id, c.name, c.url, c.priority,
 	                   c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 	                   c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
+	                   c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
 	                   COUNT(k.id) as key_count,
 	                   c.created_at, c.updated_at
 	            FROM channels c
@@ -116,6 +117,7 @@ func (s *SQLStore) GetEnabledChannelsByModel(ctx context.Context, modelName stri
 	            SELECT c.id, c.name, c.url, c.priority,
 	                   c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 	                   c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
+	                   c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
 	                   COUNT(k.id) as key_count,
 	                   c.created_at, c.updated_at
 	            FROM channels c
