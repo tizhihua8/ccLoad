@@ -911,10 +911,23 @@ window.I18N_LOCALES['zh-CN'] = {
   'channels.copyChannelTitle': '复制渠道',
   'channels.toggleEnable': '启用渠道',
   'channels.toggleDisable': '禁用渠道',
+  'channels.uaConfig': 'UA覆写配置',
+  'channels.uaConfigShort': 'UA',
   // 模态框标题
   'channels.addChannel': '添加渠道',
   'channels.editChannel': '编辑渠道',
   'channels.copyChannel': '复制渠道',
+  'channels.uaConfigTitle': 'UA 覆写配置',
+  // UA 配置模式
+  'channels.uaConfigMode': '配置模式',
+  'channels.uaModePassthrough': '透传（原样传递客户端 UA）',
+  'channels.uaModeOverride': '覆写（完全替换指定字段）',
+  'channels.uaModeAppend': '追加（在原有 UA 前添加）',
+  'channels.uaModeHeaders': 'Headers（修改请求头）',
+  'channels.uaItems': '字段配置',
+  'channels.addUAItem': '添加字段',
+  'channels.uaHeaders': '请求头配置',
+  'channels.addUAHeader': '添加请求头',
   // 卡片显示
   'channels.modelPrefix': '模型:',
   'channels.urlLabel': 'URL:',
