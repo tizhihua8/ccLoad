@@ -113,6 +113,7 @@ func (s *Server) logProxyResult(
 		APIKeyUsed:   selectedKey,
 		AuthTokenID:  reqCtx.tokenID,
 		ClientIP:     reqCtx.clientIP,
+		ClientUA:     reqCtx.clientUA,
 		BaseURL:      reqCtx.baseURL,
 		Result:       res,
 		ErrMsg:       errMsg,

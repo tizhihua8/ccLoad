@@ -312,6 +312,7 @@ func (s *Server) HandleProxyRequest(c *gin.Context) {
 		tokenHash:      tokenHashStr,
 		tokenID:        tokenIDInt64,
 		clientIP:       c.ClientIP(),
+		clientUA:       c.Request.UserAgent(),
 		activeReqID:    activeID,
 		startTime:      startTime,
 		clientProtocol: util.DetectChannelTypeFromPath(requestPath),

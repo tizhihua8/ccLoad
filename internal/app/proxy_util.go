@@ -120,6 +120,7 @@ type proxyRequestContext struct {
 	tokenHash        string           // Token哈希值（用于统计）
 	tokenID          int64            // Token ID（用于日志记录，0表示未使用token）
 	clientIP         string           // 客户端IP地址（用于日志记录）
+	clientUA         string           // 客户端User-Agent（用于日志记录）
 	activeReqID      int64            // 活跃请求ID（用于更新渠道信息）
 	observer         *ForwardObserver // 转发观测回调（可选）
 	startTime        time.Time        // 请求开始时间（用于统计）
@@ -674,6 +675,7 @@ type logEntryParams struct {
 	APIKeyUsed   string
 	AuthTokenID  int64
 	ClientIP     string
+	ClientUA     string // 客户端User-Agent
 	BaseURL      string // 请求使用的上游URL
 	Result       *fwResult
 	ErrMsg       string
@@ -697,6 +699,7 @@ func buildLogEntry(p logEntryParams) *model.LogEntry {
 		APIKeyUsed:  p.APIKeyUsed,
 		AuthTokenID: p.AuthTokenID,
 		ClientIP:    p.ClientIP,
+		ClientUA:    p.ClientUA,
 		BaseURL:     p.BaseURL,
 	}
 

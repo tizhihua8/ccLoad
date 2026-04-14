@@ -76,6 +76,7 @@ type LogEntry struct {
 	APIKeyHash    string   `json:"api_key_hash,omitempty"` // API Key 的 SHA256（仅用于后台精确定位 key_index，不泄露明文）
 	AuthTokenID   int64    `json:"auth_token_id"`          // 客户端使用的API令牌ID（新增2025-12，0表示未使用token）
 	ClientIP      string   `json:"client_ip"`              // 客户端IP地址（新增2025-12）
+	ClientUA      string   `json:"client_ua,omitempty"`    // 客户端User-Agent（新增2026-04）
 	BaseURL       string   `json:"base_url,omitempty"`     // 请求使用的上游URL（多URL场景）
 	ServiceTier   string   `json:"service_tier,omitempty"` // OpenAI service_tier: "priority"(2x)/"flex"(0.5x)
 
