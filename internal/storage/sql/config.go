@@ -24,7 +24,6 @@ func (s *SQLStore) ListConfigs(ctx context.Context) ([]*model.Config, error) {
 			       c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
 			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
-			       c.ua_config,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -62,7 +61,6 @@ func (s *SQLStore) GetConfig(ctx context.Context, id int64) (*model.Config, erro
 			       c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
 			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
-			       c.ua_config,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -164,7 +162,6 @@ func (s *SQLStore) GetEnabledChannelsByType(ctx context.Context, channelType str
 			       c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
 			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
-			       c.ua_config,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
