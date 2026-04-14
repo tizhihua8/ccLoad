@@ -1,3 +1,28 @@
+    /* 日志表格表头拉伸支持 */
+    .logs-table thead th {
+      resize: horizontal;
+      overflow: hidden;
+      text-align: center !important;
+      vertical-align: middle;
+    }
+
+    /* 日志表格所有单元格居中 */
+    .logs-table td {
+      text-align: center !important;
+      vertical-align: middle;
+    }
+
+    /* 保持左对齐的列（信息列） */
+    .logs-table td.logs-col-message {
+      text-align: left !important;
+    }
+
+    /* 时间列保持紧凑 */
+    .logs-table td.logs-col-time,
+    .logs-table th:first-child {
+      white-space: nowrap;
+    }
+
     /* API Key 测试按钮样式 */
     .test-key-btn {
       padding: 0;
@@ -457,9 +482,9 @@
       .logs-table .logs-col-message {
         display: flex !important;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
         gap: 12px;
-        text-align: right !important;
+        text-align: center !important;
       }
 
       .logs-table .logs-col-time::before,
@@ -486,7 +511,8 @@
       .logs-table .logs-col-channel,
       .logs-table .logs-col-model,
       .logs-table .logs-col-message {
-        align-items: flex-start;
+        align-items: center;
+        justify-content: center;
       }
 
       .logs-table .logs-col-channel .channel-link,
@@ -588,54 +614,52 @@
       background: rgba(248, 250, 252, 0.96);
     }
 
-    /* 固定宽度列 */
+    /* 固定宽度列 - 全部居中 */
     .logs-table th:nth-child(1),
     .logs-table td:nth-child(1) {
       width: 120px;
-      /* 时间: MM-DD HH:mm:ss */
       min-width: 120px;
       max-width: 120px;
+      text-align: center !important;
     }
 
     .logs-table th:nth-child(2),
     .logs-table td:nth-child(2) {
       width: 110px;
-      /* IP: xxx.xxx.*.* */
       min-width: 110px;
       max-width: 110px;
-      text-align: center;
+      text-align: center !important;
     }
 
     .logs-table th:nth-child(3),
     .logs-table td:nth-child(3) {
       width: 100px;
-      /* UA */
       min-width: 100px;
       max-width: 150px;
+      text-align: center !important;
     }
 
     .logs-table th:nth-child(4),
     .logs-table td:nth-child(4) {
       width: 120px;
-      /* API Key: xxxx...xxxx */
       min-width: 120px;
+      text-align: center !important;
     }
 
     .logs-table th:nth-child(7),
     .logs-table td:nth-child(7) {
       width: 60px;
-      /* 状态码: 200/403/500 */
       min-width: 60px;
       max-width: 60px;
-      text-align: center;
+      text-align: center !important;
     }
 
     .logs-table th:nth-child(13),
     .logs-table td:nth-child(13) {
       width: 70px;
-      /* 成本 */
       min-width: 70px;
       max-width: 70px;
+      text-align: center !important;
     }
 
     /* 模型标签样式 */
