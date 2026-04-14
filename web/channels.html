@@ -678,6 +678,52 @@
     </div>
   </div>
 
+  <!-- UA配置模态框 -->
+  <div id="uaConfigModal" class="modal">
+    <div class="modal-content modal-content--md">
+      <div class="modal-header">
+        <h2 class="modal-title" data-i18n="channels.uaConfigTitle">UA 覆写配置</h2>
+        <button type="button" class="close-btn" data-action="close-ua-modal">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="uaConfigMode" data-i18n="channels.uaConfigMode">配置模式</label>
+        <select id="uaConfigMode" class="form-input" data-change-action="change-ua-mode">
+          <option value="passthrough" data-i18n="channels.uaModePassthrough">透传（原样传递客户端 UA）</option>
+          <option value="override" data-i18n="channels.uaModeOverride">覆写（完全替换指定字段）</option>
+          <option value="append" data-i18n="channels.uaModeAppend">追加（在原有 UA 前后添加）</option>
+          <option value="headers" data-i18n="channels.uaModeHeaders">Headers（修改请求头）</option>
+        </select>
+      </div>
+
+      <!-- 覆写/追加模式的字段列表 -->
+      <div id="uaItemsContainer" class="form-group hidden">
+        <label class="form-label" data-i18n="channels.uaItems">字段配置</label>
+        <div id="uaItemsList" class="ua-items-list">
+          <!-- 动态添加的字段行 -->
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" data-action="add-ua-item"
+          data-i18n="channels.addUAItem">添加字段</button>
+      </div>
+
+      <!-- Headers 模式的请求头列表 -->
+      <div id="uaHeadersContainer" class="form-group hidden">
+        <label class="form-label" data-i18n="channels.uaHeaders">请求头配置</label>
+        <div id="uaHeadersList" class="ua-headers-list">
+          <!-- 动态添加的请求头行 -->
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" data-action="add-ua-header"
+          data-i18n="channels.addUAHeader">添加请求头</button>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-action="close-ua-modal"
+          data-i18n="common.cancel">取消</button>
+        <button type="button" class="btn btn-primary" data-action="save-ua-config"
+          data-i18n="common.save">保存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Key导入模态框 -->
   <div id="keyImportModal" class="modal">
     <div class="modal-content modal-content--md">
@@ -1025,6 +1071,9 @@
             data-i18n="common.test">测试</button>
           <button class="btn-icon channel-action-btn" data-action="toggle" data-channel-id="{{id}}"
             data-enabled="{{enabled}}" title="{{toggleTitle}}">{{toggleText}}</button>
+          <button class="btn-icon channel-action-btn" data-action="ua" data-channel-id="{{id}}"
+            data-i18n-title="channels.uaConfig" title="UA配置"
+            data-i18n="channels.uaConfigShort">UA</button>
           <button class="btn-icon channel-action-btn" data-action="copy" data-channel-id="{{id}}"
             data-channel-name="{{name}}" data-i18n-title="channels.copyChannelTitle" title="复制渠道"
             data-i18n="common.copy">复制</button>

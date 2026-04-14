@@ -82,8 +82,8 @@ func (s *Server) buildProxyRequest(
 	// 3. 复制请求头
 	copyRequestHeaders(req, hdr)
 
-	// 4. 应用渠道级 UA 覆写
-	applyUAOverride(req, cfg.UARewriteEnabled, cfg.UAOverride, cfg.UAPrefix, cfg.UASuffix)
+	// 4. 应用渠道级 UA 覆写（支持新版 UAConfig 和旧版字段）
+	applyUAOverride(req, cfg.UARewriteEnabled, cfg.UAOverride, cfg.UAPrefix, cfg.UASuffix, cfg.UAConfig)
 
 	// 5. 注入认证头
 	injectAPIKeyHeaders(req, apiKey, requestPath)

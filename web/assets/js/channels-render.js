@@ -331,6 +331,9 @@ function initChannelEventDelegation() {
       case 'test':
         testChannel(channelId, channelName);
         break;
+      case 'ua':
+        openUAConfigModal(channelId);
+        break;
       case 'toggle':
         toggleChannel(channelId, !enabled);
         break;

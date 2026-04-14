@@ -282,8 +282,16 @@ func copyRequestHeaders(dst *http.Request, src http.Header) {
 }
 
 // applyUAOverride 应用渠道级 UA 覆写（需先检查 enabled 开关）
-// 优先级：ua_override > ua_prefix/ua_suffix > 透传客户端 UA
-func applyUAOverride(dst *http.Request, enabled bool, uaOverride, uaPrefix, uaSuffix string) {
+// 支持旧版简单字段和新版 UAConfig JSON 配置
+// 优先级：UAConfig（新版）> ua_override > ua_prefix/ua_suffix > 透传客户端 UA
+func applyUAOverride(dst *http.Request, enabled bool, uaOverride, uaPrefix, uaSuffix string, uaConfig *model.UAConfig) {
+	// 优先使用新版 UAConfig
+	if uaConfig != nil && uaConfig.IsEnabled() {
+		applyUAConfig(dst, uaConfig)
+		return
+	}
+
+	// 回退到旧版简单字段
 	if !enabled {
 		return // 开关关闭，保持透传
 	}
@@ -302,6 +310,50 @@ func applyUAOverride(dst *http.Request, enabled bool, uaOverride, uaPrefix, uaSu
 		originalUA = originalUA + uaSuffix
 	}
 	dst.Header.Set("User-Agent", originalUA)
+}
+
+// applyUAConfig 应用新版 UA 配置
+func applyUAConfig(dst *http.Request, cfg *model.UAConfig) {
+	if cfg == nil {
+		return
+	}
+
+	switch cfg.Mode {
+	case model.UAConfigModeOverride:
+		// 覆写模式：完全替换指定字段
+		for _, item := range cfg.Items {
+			dst.Header.Set(item.Field, item.Value)
+		}
+
+	case model.UAConfigModeAppend:
+		// 追加模式：在原有值前后添加内容
+		for _, item := range cfg.Items {
+			if item.Field == "User-Agent" {
+				original := dst.Header.Get("User-Agent")
+				dst.Header.Set("User-Agent", item.Value+original)
+			} else {
+				dst.Header.Set(item.Field, item.Value)
+			}
+		}
+
+	case model.UAConfigModeHeaders:
+		// Headers 模式：修改请求头
+		for _, header := range cfg.Headers {
+			switch header.Action {
+			case "add":
+				if header.Value != "" {
+					dst.Header.Add(header.Name, header.Value)
+				}
+			case "set":
+				dst.Header.Set(header.Name, header.Value)
+			case "remove":
+				dst.Header.Del(header.Name)
+			}
+		}
+
+	default:
+		// 透传模式或未知模式，不做任何修改
+	}
 }
 
 // injectAPIKeyHeaders 按路径类型注入API Key头（Gemini vs Claude）

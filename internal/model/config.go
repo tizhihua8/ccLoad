@@ -54,11 +54,14 @@ type Config struct {
 	// 每日成本限额
 	DailyCostLimit float64 `json:"daily_cost_limit"` // 每日成本限额（美元），0表示无限制
 
-	// User-Agent 覆写
+	// User-Agent 覆写（旧版简单字段，已废弃但保留兼容）
 	UARewriteEnabled bool   `json:"ua_rewrite_enabled"` // 是否启用 UA 覆写（默认关闭，透传客户端 UA）
 	UAOverride       string `json:"ua_override"`        // 完全覆写 UA（非空时替换客户端 UA）
 	UAPrefix         string `json:"ua_prefix"`          // UA 前缀追加（在原有 UA 前添加）
 	UASuffix         string `json:"ua_suffix"`          // UA 后缀追加（在原有 UA 后添加）
+
+	// User-Agent 配置（新版 JSON 配置，支持复杂 UA 覆写）
+	UAConfig *UAConfig `json:"ua_config,omitempty"` // UA 覆写配置（nil 表示未启用新版配置）
 
 	CreatedAt JSONTime `json:"created_at"` // 使用JSONTime确保序列化格式一致（RFC3339）
 	UpdatedAt JSONTime `json:"updated_at"` // 使用JSONTime确保序列化格式一致（RFC3339）
@@ -352,4 +355,89 @@ func extractVersionNumbers(model string) []int {
 	}
 
 	return nums
+}
+
+// UAConfigMode UA 覆写配置模式
+type UAConfigMode string
+
+const (
+	// UAConfigModePassThrough 透传模式 - 原样传递客户端 UA
+	UAConfigModePassThrough UAConfigMode = "passthrough"
+	// UAConfigModeOverride 覆写模式 - 完全替换为指定 UA
+	UAConfigModeOverride UAConfigMode = "override"
+	// UAConfigModeAppend 追加模式 - 在原有 UA 前后添加内容
+	UAConfigModeAppend UAConfigMode = "append"
+	// UAConfigModeHeaders Headers模式 - 修改请求头
+	UAConfigModeHeaders UAConfigMode = "headers"
+)
+
+// UAConfigItem UA 覆写配置条目（用于覆写模式和追加模式）
+type UAConfigItem struct {
+	Field string `json:"field"` // 字段名，如 "User-Agent", "X-Custom-Header"
+	Value string `json:"value"` // 字段值
+}
+
+// UAHeaderItem Headers 模式下的请求头配置条目
+type UAHeaderItem struct {
+	Name   string `json:"name"`   // Header 名称
+	Value  string `json:"value"`  // Header 值
+	Action string `json:"action"` // 动作: "add" | "set" | "remove"
+}
+
+// UAConfig UA 覆写完整配置结构
+type UAConfig struct {
+	Mode    UAConfigMode   `json:"mode"`              // 工作模式: passthrough | override | append | headers
+	Items   []UAConfigItem `json:"items,omitempty"`   // 覆写/追加模式的字段列表
+	Headers []UAHeaderItem `json:"headers,omitempty"` // Headers 模式的请求头列表
+}
+
+// IsEnabled 检查 UA 配置是否启用（非透传模式且有内容）
+func (u *UAConfig) IsEnabled() bool {
+	if u == nil {
+		return false
+	}
+	switch u.Mode {
+	case UAConfigModeOverride, UAConfigModeAppend:
+		return len(u.Items) > 0
+	case UAConfigModeHeaders:
+		return len(u.Headers) > 0
+	default:
+		return false
+	}
+}
+
+// Validate 验证 UA 配置是否有效
+func (u *UAConfig) Validate() error {
+	if u == nil {
+		return nil
+	}
+	switch u.Mode {
+	case UAConfigModePassThrough:
+		return nil
+	case UAConfigModeOverride, UAConfigModeAppend:
+		if len(u.Items) == 0 {
+			return errors.New("override/append mode requires at least one item")
+		}
+		for _, item := range u.Items {
+			if item.Field == "" {
+				return errors.New("item field cannot be empty")
+			}
+		}
+		return nil
+	case UAConfigModeHeaders:
+		if len(u.Headers) == 0 {
+			return errors.New("headers mode requires at least one header")
+		}
+		for _, h := range u.Headers {
+			if h.Name == "" {
+				return errors.New("header name cannot be empty")
+			}
+			if h.Action != "add" && h.Action != "set" && h.Action != "remove" {
+				return errors.New("header action must be add, set, or remove")
+			}
+		}
+		return nil
+	default:
+		return errors.New("invalid mode")
+	}
 }

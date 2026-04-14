@@ -92,6 +92,10 @@ func migrate(ctx context.Context, db *sql.DB, dialect Dialect) error {
 			if err := ensureChannelsUAOverride(ctx, db, dialect); err != nil {
 				return fmt.Errorf("migrate channels ua override: %w", err)
 			}
+			// 增量迁移：添加 ua_config JSON 字段（2026-04新增）
+			if err := ensureChannelsUAConfig(ctx, db, dialect); err != nil {
+				return fmt.Errorf("migrate channels ua_config: %w", err)
+			}
 			// 增量迁移：将url字段从VARCHAR(191)扩展为TEXT（支持多URL存储）
 			if err := migrateChannelsURLToText(ctx, db, dialect); err != nil {
 				return fmt.Errorf("migrate channels url to text: %w", err)
@@ -1437,6 +1441,40 @@ func ensureChannelsUAOverride(ctx context.Context, db *sql.DB, dialect Dialect) 
 	}
 	return ensureSQLiteColumns(ctx, db, "channels", sqliteCols)
 }
+
+// ensureChannelsUAConfig 添加渠道 UA 配置 JSON 字段（支持复杂 UA 覆写配置）
+func ensureChannelsUAConfig(ctx context.Context, db *sql.DB, dialect Dialect) error {
+	colName := "ua_config"
+	var colDef string
+	if dialect == DialectMySQL {
+		colDef = "TEXT NOT NULL DEFAULT ''"
+	} else {
+		colDef = "TEXT NOT NULL DEFAULT ''"
+	}
+
+	if dialect == DialectMySQL {
+		var count int
+		err := db.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='channels' AND COLUMN_NAME='"+colName+"'",
+		).Scan(&count)
+		if err != nil {
+			return fmt.Errorf("check %s field: %w", colName, err)
+		}
+		if count == 0 {
+			if _, err := db.ExecContext(ctx,
+				"ALTER TABLE channels ADD COLUMN "+colName+" "+colDef); err != nil {
+				return fmt.Errorf("add %s column: %w", colName, err)
+			}
+			log.Printf("[MIGRATE] Added channels.%s column", colName)
+		}
+		return nil
+	}
+
+	// SQLite
+	sqliteCol := sqliteColumnDef{name: colName, definition: colDef}
+	return ensureSQLiteColumns(ctx, db, "channels", []sqliteColumnDef{sqliteCol})
+}
+
 func ensureAPIKeysAPIKeyLength(ctx context.Context, db *sql.DB, dialect Dialect) error {
 	if dialect != DialectMySQL {
 		return nil
