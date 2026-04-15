@@ -376,7 +376,7 @@ async function confirmClearCooldown() {
 
   for (const channelId of channelIds) {
     try {
-      const resp = await fetch(`/admin/channels/${channelId}/cooldown`, {
+      const resp = await fetchWithAuth(`/admin/channels/${channelId}/cooldown`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ duration_ms: 0 })
