@@ -1913,10 +1913,29 @@ function collectUAConfig() {
 async function saveUAConfig() {
   if (!currentUAConfigChannelId) return;
 
+  // 先获取完整渠道数据
+  const channelResp = await fetchAPIWithAuth(`/admin/channels/${currentUAConfigChannelId}`);
+  if (!channelResp.success || !channelResp.data) {
+    if (window.showError) window.showError('Failed to load channel data');
+    return;
+  }
+
+  const channel = channelResp.data;
   const config = collectUAConfig();
 
-  // 保存时包含 body_operations
+  // 构建完整的保存数据（包含原有渠道所有字段）
   const saveData = {
+    name: channel.name,
+    url: channel.url,
+    api_key: channel.api_keys ? channel.api_keys.join(',') : '',
+    channel_type: channel.channel_type,
+    key_strategy: channel.key_strategy || 'sequential',
+    priority: channel.priority || 0,
+    daily_cost_limit: channel.daily_cost_limit || 0,
+    enabled: channel.enabled,
+    scheduled_check_enabled: channel.scheduled_check_enabled || false,
+    scheduled_check_model: channel.scheduled_check_model || '',
+    models: channel.models || [],
     ua_rewrite_enabled: config.mode !== 'passthrough' || config.bodyOperations.length > 0,
     ua_override: '',
     ua_prefix: '',
