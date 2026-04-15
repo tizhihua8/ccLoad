@@ -1050,6 +1050,33 @@ curl -s http://localhost:8080/public/summary
 env | grep CCLOAD
 ```
 
+## 📚 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| [CLAUDE.md](CLAUDE.md) | 开发指南与架构说明 |
+| [docs/ua-config.md](docs/ua-config.md) | UA 覆写与请求体重写配置指南 |
+| [README_EN.md](README_EN.md) | English Documentation |
+
+### UA 覆写与请求体重写
+
+解决上游 API 兼容性问题（如 Fireworks AI 不支持 `json_mode`，`max_tokens > 4096` 必须 `stream=true` 等）：
+
+```bash
+# 查看完整配置文档
+cat docs/ua-config.md
+```
+
+快速示例：
+```json
+{
+  "body_operations": [
+    { "op": "delete", "path": "json_mode" },
+    { "op": "set", "path": "stream", "value": "true", "condition": "{{if gt .MaxTokens 4096}}true{{end}}" }
+  ]
+}
+```
+
 ## 📄 许可证
 
 MIT License
