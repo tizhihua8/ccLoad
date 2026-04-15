@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"log"
 
 	modelpkg "ccLoad/internal/model"
 	"ccLoad/internal/util"
@@ -17,7 +18,7 @@ func (s *Server) selectCandidatesByChannelType(ctx context.Context, channelType 
 		return nil, err
 	}
 
-	// 兜底：全量查询（用于“全冷却兜底”场景）
+	// 兜底：全量查询（用于"全冷却兜底"场景）
 	if len(channels) == 0 {
 		all, err := s.store.ListConfigs(ctx)
 		if err != nil {
@@ -66,11 +67,13 @@ func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model strin
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("[DEBUG] selectCandidates: model=%s, type=%s, crossProtocolEnabled=%v, raw_channels=%d", model, channelType, crossProtocolEnabled, len(channels))
 
 	// [FIX] 协议适配器启用时，允许跨协议匹配，不进行类型过滤
 	channels = filterByType(channels)
+	log.Printf("[DEBUG] selectCandidates: after filterByType, channels=%d", len(channels))
 
-	// 先做冷却/成本过滤，但不触发“全冷却兜底”，以便后续还能继续做模糊匹配回退。
+	// 先做冷却/成本过滤，但不触发"全冷却兜底"，以便后续还能继续做模糊匹配回退。
 	filtered, err := s.filterCooldownChannelsStrict(ctx, channels)
 	if err != nil {
 		return nil, err
@@ -79,7 +82,7 @@ func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model strin
 		return filtered, nil
 	}
 
-	// 兜底：全量查询（用于“模糊匹配回退”以及最终“全冷却兜底”场景）
+	// 兜底：全量查询（用于"模糊匹配回退"以及最终"全冷却兜底"场景）
 	// 注意：此处不能以 len(channels)==0 作为是否回退的条件。
 	// 精确候选可能存在但全部在冷却/成本限额下不可用，这时仍需尝试模糊匹配补充候选。
 	var allCandidates []*modelpkg.Config
@@ -95,15 +98,18 @@ func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model strin
 			}
 			// 协议适配器启用时，不进行类型过滤
 			if channelType != "" && cfg.GetChannelType() != normalizedType && !crossProtocolEnabled {
+				log.Printf("[DEBUG] Fallback filter skipped cfg=%d type=%s (crossProtocolEnabled=true)", cfg.ID, cfg.GetChannelType())
 				continue
 			}
 			if s.configSupportsModelWithFuzzyMatch(cfg, model) {
 				allCandidates = append(allCandidates, cfg)
+				log.Printf("[DEBUG] Fallback added cfg=%d type=%s", cfg.ID, cfg.GetChannelType())
 			}
 		}
+		log.Printf("[DEBUG] Fallback allCandidates=%d", len(allCandidates))
 	}
 
-	// 再次过滤，但仍不触发“全冷却兜底”：先把可用的候选尽可能找出来。
+	// 再次过滤，但仍不触发"全冷却兜底"：先把可用的候选尽可能找出来。
 	filtered, err = s.filterCooldownChannelsStrict(ctx, allCandidates)
 	if err != nil {
 		return nil, err
@@ -112,6 +118,6 @@ func (s *Server) selectCandidatesByModelAndType(ctx context.Context, model strin
 		return filtered, nil
 	}
 
-	// 最终兜底：如果候选存在但全部在冷却中，让全冷却兜底逻辑选择“最早恢复”的渠道。
+	// 最终兜底：如果候选存在但全部在冷却中，让全冷却兜底逻辑选择"最早恢复"的渠道。
 	return s.filterCooldownChannels(ctx, allCandidates)
 }

@@ -1,6 +1,8 @@
 package sql
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -116,9 +118,8 @@ func NewConfigScanner() *ConfigScanner {
 // 字段顺序必须与 SQL 查询一致：
 // id, name, url, priority, channel_type, enabled, scheduled_check_enabled, scheduled_check_model,
 // cooldown_until, cooldown_duration_ms, daily_cost_limit,
-// ua_rewrite_enabled, ua_override, ua_prefix, ua_suffix,
+// ua_rewrite_enabled, ua_override, ua_prefix, ua_suffix, ua_config,
 // key_count, created_at, updated_at
-// 注意：ua_config 列暂时从查询中移除，直到数据库迁移完成
 func (cs *ConfigScanner) ScanConfig(scanner interface {
 	Scan(...any) error
 }) (*model.Config, error) {
@@ -127,13 +128,15 @@ func (cs *ConfigScanner) ScanConfig(scanner interface {
 	var scheduledCheckEnabledInt int
 	var uaRewriteEnabledInt int
 	var scheduledCheckModel string
+	var uaConfigRaw sql.NullString
 	var createdAtRaw, updatedAtRaw any
 
-	// 扫描 18 个字段（不包含 ua_config）
+	// 扫描 19 个字段（包含 ua_config）
 	if err := scanner.Scan(&c.ID, &c.Name, &c.URL, &c.Priority,
 		&c.ChannelType, &enabledInt, &scheduledCheckEnabledInt, &scheduledCheckModel,
 		&c.CooldownUntil, &c.CooldownDurationMs, &c.DailyCostLimit,
 		&uaRewriteEnabledInt, &c.UAOverride, &c.UAPrefix, &c.UASuffix,
+		&uaConfigRaw,
 		&c.KeyCount,
 		&createdAtRaw, &updatedAtRaw); err != nil {
 		return nil, err
@@ -143,6 +146,14 @@ func (cs *ConfigScanner) ScanConfig(scanner interface {
 	c.ScheduledCheckEnabled = scheduledCheckEnabledInt != 0
 	c.UARewriteEnabled = uaRewriteEnabledInt != 0
 	c.ScheduledCheckModel = scheduledCheckModel
+
+	// 解析 ua_config JSON
+	if uaConfigRaw.Valid && uaConfigRaw.String != "" {
+		var uaConfig model.UAConfig
+		if err := json.Unmarshal([]byte(uaConfigRaw.String), &uaConfig); err == nil {
+			c.UAConfig = &uaConfig
+		}
+	}
 
 	// 转换时间戳（支持不同数据库）
 	now := time.Now()

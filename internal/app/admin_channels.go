@@ -375,6 +375,15 @@ func (s *Server) handleUpdateChannel(c *gin.Context, id int64) {
 		return
 	}
 
+	// [DEBUG] 打印接收到的请求字段
+	log.Printf("[DEBUG] Channel %d update request fields: %v", id, func() []string {
+		keys := make([]string, 0, len(rawReq))
+		for k := range rawReq {
+			keys = append(keys, k)
+		}
+		return keys
+	}())
+
 	// 检查是否为简单的enabled字段更新
 	if len(rawReq) == 1 {
 		if enabled, ok := rawReq["enabled"].(bool); ok {
@@ -410,6 +419,7 @@ func (s *Server) handleUpdateChannel(c *gin.Context, id int64) {
 	}
 	if isUAOnlyUpdate {
 		// 只更新 UA 配置字段
+		uaConfigUpdated := false
 		if v, ok := rawReq["ua_rewrite_enabled"].(bool); ok {
 			existing.UARewriteEnabled = v
 		}
@@ -428,13 +438,24 @@ func (s *Server) handleUpdateChannel(c *gin.Context, id int64) {
 			var uaConfig model.UAConfig
 			if err := sonic.Unmarshal(uaBytes, &uaConfig); err == nil {
 				existing.UAConfig = &uaConfig
+				uaConfigUpdated = true
 			}
 		}
+		// [FIX] 如果 UA 配置包含 body_operations，自动启用 ua_rewrite_enabled
+		if uaConfigUpdated && existing.UAConfig != nil && len(existing.UAConfig.BodyOperations) > 0 {
+			existing.UARewriteEnabled = true
+			log.Printf("[INFO] Channel %d: auto-enabled ua_rewrite_enabled (body_operations=%d)", id, len(existing.UAConfig.BodyOperations))
+		}
+		log.Printf("[DEBUG] Before UpdateConfig: UARewriteEnabled=%v", existing.UARewriteEnabled)
 		upd, err := s.store.UpdateConfig(c.Request.Context(), id, existing)
 		if err != nil {
+			log.Printf("[ERROR] UpdateConfig failed: %v", err)
 			RespondError(c, http.StatusInternalServerError, err)
 			return
 		}
+		log.Printf("[DEBUG] After UpdateConfig: returned UARewriteEnabled=%v", upd.UARewriteEnabled)
+		// UA 配置变更影响请求处理，必须立即失效缓存
+		s.InvalidateChannelListCache()
 		RespondJSON(c, http.StatusOK, upd)
 		return
 	}

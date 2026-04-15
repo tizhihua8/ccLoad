@@ -274,7 +274,9 @@ func (s *Server) HandleProxyRequest(c *gin.Context) {
 	}
 
 	cands, err := s.selectRouteCandidates(ctx, c, originalModel)
+	log.Printf("[DEBUG] HandleProxyRequest: selectRouteCandidates model=%s, cands=%d, err=%v", originalModel, len(cands), err)
 	if err != nil {
+		log.Printf("[ERROR] selectRouteCandidates failed: %v", err)
 		if errors.Is(err, errUnknownChannelType) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "unsupported path"})
 			return
@@ -284,6 +286,7 @@ func (s *Server) HandleProxyRequest(c *gin.Context) {
 	}
 
 	if len(cands) == 0 {
+		log.Printf("[DEBUG] HandleProxyRequest: no candidates found for model=%s", originalModel)
 		s.AddLogAsync(&model.LogEntry{
 			Time:        model.JSONTime{Time: time.Now()},
 			Model:       originalModel,

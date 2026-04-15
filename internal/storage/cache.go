@@ -68,24 +68,48 @@ func deepCopyConfig(src *modelpkg.Config) *modelpkg.Config {
 	}
 
 	dst := &modelpkg.Config{
-		ID:                 src.ID,
-		Name:               src.Name,
-		ChannelType:        src.ChannelType,
-		URL:                src.URL,
-		Priority:           src.Priority,
-		Enabled:            src.Enabled,
-		CooldownUntil:      src.CooldownUntil,
-		CooldownDurationMs: src.CooldownDurationMs,
-		DailyCostLimit:     src.DailyCostLimit,
-		CreatedAt:          src.CreatedAt,
-		UpdatedAt:          src.UpdatedAt,
-		KeyCount:           src.KeyCount,
+		ID:                    src.ID,
+		Name:                  src.Name,
+		ChannelType:           src.ChannelType,
+		URL:                   src.URL,
+		Priority:              src.Priority,
+		Enabled:               src.Enabled,
+		ScheduledCheckEnabled: src.ScheduledCheckEnabled,
+		ScheduledCheckModel:   src.ScheduledCheckModel,
+		CooldownUntil:         src.CooldownUntil,
+		CooldownDurationMs:    src.CooldownDurationMs,
+		DailyCostLimit:        src.DailyCostLimit,
+		UARewriteEnabled:      src.UARewriteEnabled,
+		UAOverride:            src.UAOverride,
+		UAPrefix:              src.UAPrefix,
+		UASuffix:              src.UASuffix,
+		CreatedAt:             src.CreatedAt,
+		UpdatedAt:             src.UpdatedAt,
+		KeyCount:              src.KeyCount,
 	}
 
 	// 深拷贝 ModelEntries slice
 	if src.ModelEntries != nil {
 		dst.ModelEntries = make([]modelpkg.ModelEntry, len(src.ModelEntries))
 		copy(dst.ModelEntries, src.ModelEntries)
+	}
+
+	// 深拷贝 UAConfig
+	if src.UAConfig != nil {
+		uaCopy := *src.UAConfig
+		if src.UAConfig.Items != nil {
+			uaCopy.Items = make([]modelpkg.UAConfigItem, len(src.UAConfig.Items))
+			copy(uaCopy.Items, src.UAConfig.Items)
+		}
+		if src.UAConfig.Headers != nil {
+			uaCopy.Headers = make([]modelpkg.UAHeaderItem, len(src.UAConfig.Headers))
+			copy(uaCopy.Headers, src.UAConfig.Headers)
+		}
+		if src.UAConfig.BodyOperations != nil {
+			uaCopy.BodyOperations = make([]modelpkg.BodyOperation, len(src.UAConfig.BodyOperations))
+			copy(uaCopy.BodyOperations, src.UAConfig.BodyOperations)
+		}
+		dst.UAConfig = &uaCopy
 	}
 
 	return dst

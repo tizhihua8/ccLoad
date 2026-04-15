@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -23,7 +24,7 @@ func (s *SQLStore) ListConfigs(ctx context.Context) ([]*model.Config, error) {
 			SELECT c.id, c.name, c.url, c.priority, c.channel_type, c.enabled,
 			       c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
-			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
+			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix, c.ua_config,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -60,9 +61,9 @@ func (s *SQLStore) GetConfig(ctx context.Context, id int64) (*model.Config, erro
 			SELECT c.id, c.name, c.url, c.priority, c.channel_type, c.enabled,
 			       c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
-			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
+			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix, c.ua_config,
 			       COUNT(k.id) as key_count,
-			       c.created_at, c.updated_at
+		       c.created_at, c.updated_at
 			FROM channels c
 			LEFT JOIN api_keys k ON c.id = k.channel_id
 			WHERE c.id = ?
@@ -101,7 +102,7 @@ func (s *SQLStore) GetEnabledChannelsByModel(ctx context.Context, modelName stri
 	            SELECT c.id, c.name, c.url, c.priority,
 	                   c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 	                   c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
-	                   c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
+	                   c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix, c.ua_config,
 	                   COUNT(k.id) as key_count,
 	                   c.created_at, c.updated_at
 	            FROM channels c
@@ -118,7 +119,7 @@ func (s *SQLStore) GetEnabledChannelsByModel(ctx context.Context, modelName stri
 	            SELECT c.id, c.name, c.url, c.priority,
 	                   c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 	                   c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
-	                   c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
+	                   c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix, c.ua_config,
 	                   COUNT(k.id) as key_count,
 	                   c.created_at, c.updated_at
 	            FROM channels c
@@ -161,7 +162,7 @@ func (s *SQLStore) GetEnabledChannelsByType(ctx context.Context, channelType str
 			SELECT c.id, c.name, c.url, c.priority,
 			       c.channel_type, c.enabled, c.scheduled_check_enabled, c.scheduled_check_model,
 			       c.cooldown_until, c.cooldown_duration_ms, c.daily_cost_limit,
-			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix,
+			       c.ua_rewrite_enabled, c.ua_override, c.ua_prefix, c.ua_suffix, c.ua_config,
 			       COUNT(k.id) as key_count,
 			       c.created_at, c.updated_at
 			FROM channels c
@@ -317,17 +318,20 @@ func (s *SQLStore) UpdateConfig(ctx context.Context, id int64, upd *model.Config
 
 	err := s.WithTransaction(ctx, func(tx *sql.Tx) error {
 		// 更新渠道记录
-		_, err := tx.ExecContext(ctx, `
+		result, err := tx.ExecContext(ctx, `
 			UPDATE channels
-			SET name=?, url=?, priority=?, channel_type=?, enabled=?, scheduled_check_enabled=?, scheduled_check_model=?, daily_cost_limit=?, ua_override=?, ua_prefix=?, ua_suffix=?, ua_config=?, updated_at=?
+			SET name=?, url=?, priority=?, channel_type=?, enabled=?, scheduled_check_enabled=?, scheduled_check_model=?, daily_cost_limit=?, ua_rewrite_enabled=?, ua_override=?, ua_prefix=?, ua_suffix=?, ua_config=?, updated_at=?
 			WHERE id=?
 		`, name, url, upd.Priority, channelType,
 			boolToInt(upd.Enabled), boolToInt(upd.ScheduledCheckEnabled), upd.ScheduledCheckModel, upd.DailyCostLimit,
-			upd.UAOverride, upd.UAPrefix, upd.UASuffix, uaConfigJSON,
+			boolToInt(upd.UARewriteEnabled), upd.UAOverride, upd.UAPrefix, upd.UASuffix, uaConfigJSON,
 			updatedAtUnix, id)
 		if err != nil {
+			log.Printf("[ERROR] UpdateConfig SQL failed: %v", err)
 			return err
 		}
+		affected, _ := result.RowsAffected()
+		log.Printf("[DEBUG] UpdateConfig rows affected: %d, ua_rewrite_enabled=%d", affected, boolToInt(upd.UARewriteEnabled))
 
 		// 更新 channel_models 表（先删后插）
 		if err := s.saveModelEntriesTx(ctx, tx, id, upd.ModelEntries); err != nil {
