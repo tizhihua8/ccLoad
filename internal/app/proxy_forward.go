@@ -661,9 +661,13 @@ func (s *Server) forwardAttempt(
 			rewriteCtx.Model = actualModel
 		}
 
+		// [DEBUG] 记录重写前后的请求体
+		log.Printf("[DEBUG] [BodyRewrite] 渠道ID=%d 重写前: %s", cfg.ID, string(convertedBody))
+
 		newBody, rewriteErr := applyBodyOperations(convertedBody, cfg.UAConfig.BodyOperations, rewriteCtx)
 		if rewriteErr == nil {
 			convertedBody = newBody
+			log.Printf("[DEBUG] [BodyRewrite] 渠道ID=%d 重写后: %s", cfg.ID, string(convertedBody))
 		} else {
 			// 重写失败记录警告但不阻断请求（保守策略）
 			log.Printf("[WARN] [BodyRewrite] 渠道ID=%d 请求体重写失败: %v", cfg.ID, rewriteErr)
