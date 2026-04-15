@@ -993,7 +993,10 @@ async function copyChannel(id, name) {
   document.getElementById('channelModal').classList.add('show');
 }
 
-function generateCopyName(originalName) {
+function generateCopyName(originalName, depth) {
+  depth = depth || 0;
+  if (depth > 100) return originalName + ' - ' + (window.t('channels.copySuffix')) + ' ' + Date.now();
+
   const suffix = window.t('channels.copySuffix');
   // 匹配带有 " - 复制" 或 " - Copy" 后缀的名称
   const copyPattern = new RegExp(`^(.+?)(?:\\s*-\\s*${suffix}(?:\\s*(\\d+))?)?$`);
@@ -1010,7 +1013,7 @@ function generateCopyName(originalName) {
 
   const existingNames = channels.map(c => c.name.toLowerCase());
   if (existingNames.includes(proposedName.toLowerCase())) {
-    return generateCopyName(proposedName);
+    return generateCopyName(proposedName, depth + 1);
   }
 
   return proposedName;
