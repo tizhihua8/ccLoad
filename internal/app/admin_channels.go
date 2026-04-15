@@ -181,7 +181,9 @@ func (s *Server) handleCreateChannel(c *gin.Context) {
 	}
 
 	// 创建渠道（不包含API Key）
-	created, err := s.store.CreateConfig(c.Request.Context(), req.ToConfig())
+	cfg := req.ToConfig()
+	log.Printf("[DEBUG] CreateChannel: UARewriteEnabled=%v UAConfig=%v", cfg.UARewriteEnabled, cfg.UAConfig != nil)
+	created, err := s.store.CreateConfig(c.Request.Context(), cfg)
 	if err != nil {
 		RespondError(c, http.StatusInternalServerError, err)
 		return

@@ -226,6 +226,9 @@ function initChannelEditorActions() {
 async function showAddModal() {
   editingChannelId = null;
   currentChannelKeyCooldowns = [];
+  // 新建渠道时清空 UA 配置
+  currentChannelUAConfig = null;
+  currentChannelUARewriteEnabled = false;
   await syncScheduledCheckVisibility();
 
   setChannelModalTitle('channels.addChannel');
@@ -341,6 +344,9 @@ function closeModal() {
   }
   document.getElementById('channelModal').classList.remove('show');
   editingChannelId = null;
+  // 关闭时清空 UA 配置
+  currentChannelUAConfig = null;
+  currentChannelUARewriteEnabled = false;
   resetChannelFormDirty();
 }
 
@@ -417,6 +423,11 @@ async function saveChannel(event) {
   if (!formData.name || !formData.url || !formData.api_key || formData.models.length === 0) {
     if (window.showError) window.showError(window.t('channels.fillAllRequired'));
     return;
+  }
+
+  // [DEBUG] 复制渠道时检查 UA 配置是否正确传递
+  if (!editingChannelId) {
+    console.log('[DEBUG] CreateChannel: ua_rewrite_enabled=', formData.ua_rewrite_enabled, 'ua_config=', formData.ua_config);
   }
 
   try {
@@ -962,8 +973,9 @@ async function copyChannel(id, name) {
   document.getElementById('channelScheduledCheckModel').value = channel.scheduled_check_model || '';
 
   // 复制 UA 配置（新增）
-  currentChannelUAConfig = channel.ua_config || null;
+  currentChannelUAConfig = channel.ua_config ? JSON.parse(JSON.stringify(channel.ua_config)) : null;
   currentChannelUARewriteEnabled = channel.ua_rewrite_enabled || false;
+  console.log('[DEBUG] copyChannel: ua_config=', channel.ua_config, 'ua_rewrite_enabled=', channel.ua_rewrite_enabled);
 
   // 加载模型配置（新格式：models是 {model, redirect_model} 数组）
   redirectTableData = (channel.models || []).map(m => ({
