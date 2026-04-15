@@ -2769,3 +2769,68 @@
   background: var(--primary-100, #dbeafe);
   border-color: var(--primary-300, #93c5fd);
 }
+
+/* ==================== 解除冷却模态框 ==================== */
+.cooldown-channel-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--neutral-100, #f1f5f9);
+  transition: background 0.15s;
+}
+.cooldown-channel-item:last-child {
+  border-bottom: none;
+}
+.cooldown-channel-item:hover {
+  background: var(--neutral-50, #f8fafc);
+}
+.cooldown-channel-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.cooldown-channel-info {
+  flex: 1;
+  min-width: 0;
+}
+.cooldown-channel-name {
+  font-weight: 600;
+  color: var(--neutral-900);
+  font-size: 14px;
+}
+.cooldown-channel-meta {
+  font-size: 12px;
+  color: var(--neutral-500);
+  margin-top: 2px;
+}
+.cooldown-channel-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+.cooldown-channel-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--neutral-400);
+  font-size: 14px;
+}
+#btn_clear_cooldown {
+  position: relative;
+}
+#btn_clear_cooldown .cooldown-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid white;
+}

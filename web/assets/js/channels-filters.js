@@ -76,6 +76,11 @@ function filterChannels() {
   filteredChannels = filtered; // 保存筛选后的列表供其他模块使用
   renderChannels(filtered);
   updateFilterInfo(filtered.length, channels.length);
+
+  // 更新解除冷却按钮红点
+  if (typeof updateClearCooldownBadge === 'function') {
+    updateClearCooldownBadge();
+  }
 }
 
 // Update filter info display
@@ -205,4 +210,218 @@ function setupFilterListeners() {
     if (typeof saveChannelsFilters === 'function') saveChannelsFilters();
     filterChannels();
   });
+
+  // 解除冷却按钮
+  const clearCooldownBtn = document.getElementById('btn_clear_cooldown');
+  if (clearCooldownBtn) {
+    clearCooldownBtn.addEventListener('click', openClearCooldownModal);
+  }
+
+  // 解除冷却模态框关闭按钮
+  document.querySelectorAll('[data-action="close-clear-cooldown-modal"]').forEach(btn => {
+    btn.addEventListener('click', closeClearCooldownModal);
+  });
+
+  // 全选/取消全选
+  const btnSelectAllCooldown = document.getElementById('btnSelectAllCooldown');
+  const btnDeselectAllCooldown = document.getElementById('btnDeselectAllCooldown');
+  if (btnSelectAllCooldown) {
+    btnSelectAllCooldown.addEventListener('click', () => toggleAllCooldownSelection(true));
+  }
+  if (btnDeselectAllCooldown) {
+    btnDeselectAllCooldown.addEventListener('click', () => toggleAllCooldownSelection(false));
+  }
+
+  // 确定解除按钮
+  const btnConfirmClearCooldown = document.getElementById('btnConfirmClearCooldown');
+  if (btnConfirmClearCooldown) {
+    btnConfirmClearCooldown.addEventListener('click', confirmClearCooldown);
+  }
+
+  // 点击模态框背景关闭
+  const modal = document.getElementById('clearCooldownModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeClearCooldownModal();
+    });
+  }
+
+  // ESC键关闭
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('clearCooldownModal');
+      if (modal && modal.classList.contains('active')) {
+        closeClearCooldownModal();
+      }
+    }
+  });
+}
+
+// ==================== 解除冷却功能 ====================
+let selectedCooldownChannelIds = new Set();
+
+function openClearCooldownModal() {
+  // 获取所有处于冷却中的渠道
+  const cooldownChannels = channels.filter(c => c.cooldown_remaining_ms > 0);
+  const countEl = document.getElementById('cooldownChannelCount');
+  const listEl = document.getElementById('cooldownChannelList');
+
+  if (countEl) countEl.textContent = cooldownChannels.length;
+
+  if (cooldownChannels.length === 0) {
+    listEl.innerHTML = `<div class="cooldown-channel-empty">${window.t('channels.noCooldownChannels')}</div>`;
+  } else {
+    selectedCooldownChannelIds.clear();
+    // 默认全选
+    cooldownChannels.forEach(c => selectedCooldownChannelIds.add(String(c.id)));
+    renderCooldownChannelList(cooldownChannels);
+  }
+
+  const modal = document.getElementById('clearCooldownModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeClearCooldownModal() {
+  const modal = document.getElementById('clearCooldownModal');
+  if (modal) modal.classList.remove('active');
+  selectedCooldownChannelIds.clear();
+}
+
+function renderCooldownChannelList(cooldownChannels) {
+  const listEl = document.getElementById('cooldownChannelList');
+  if (!listEl) return;
+
+  const formatDuration = (ms) => {
+    const s = Math.ceil(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${secs}s`;
+    return `${secs}s`;
+  };
+
+  listEl.innerHTML = cooldownChannels.map(channel => {
+    const id = String(channel.id);
+    const checked = selectedCooldownChannelIds.has(id) ? 'checked' : '';
+    const durationText = formatDuration(channel.cooldown_remaining_ms || 0);
+    const typeLabel = (channel.channel_type || 'anthropic').toUpperCase();
+    return `
+      <div class="cooldown-channel-item">
+        <input type="checkbox" data-channel-id="${id}" ${checked} onchange="toggleCooldownChannel('${id}')">
+        <div class="cooldown-channel-info">
+          <div class="cooldown-channel-name">${escapeHtml(channel.name)}</div>
+          <div class="cooldown-channel-meta">ID: ${channel.id} · ${typeLabel}</div>
+        </div>
+        <span class="cooldown-channel-badge">${durationText}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// 全局函数供内联 onclick 调用
+window.toggleCooldownChannel = function(channelId) {
+  if (selectedCooldownChannelIds.has(channelId)) {
+    selectedCooldownChannelIds.delete(channelId);
+  } else {
+    selectedCooldownChannelIds.add(channelId);
+  }
+};
+
+function toggleAllCooldownSelection(select) {
+  if (select) {
+    channels.forEach(c => {
+      if (c.cooldown_remaining_ms > 0) selectedCooldownChannelIds.add(String(c.id));
+    });
+  } else {
+    selectedCooldownChannelIds.clear();
+  }
+  // 重新渲染
+  const cooldownChannels = channels.filter(c => c.cooldown_remaining_ms > 0);
+  renderCooldownChannelList(cooldownChannels);
+}
+
+// 更新解除冷却按钮的红点提示
+function updateClearCooldownBadge() {
+  const btn = document.getElementById('btn_clear_cooldown');
+  if (!btn) return;
+
+  const hasCooldown = channels.some(c => c.cooldown_remaining_ms > 0);
+  const existingDot = btn.querySelector('.cooldown-dot');
+
+  if (hasCooldown && !existingDot) {
+    const dot = document.createElement('span');
+    dot.className = 'cooldown-dot';
+    btn.appendChild(dot);
+  } else if (!hasCooldown && existingDot) {
+    existingDot.remove();
+  }
+}
+
+async function confirmClearCooldown() {
+  if (selectedCooldownChannelIds.size === 0) {
+    if (window.showError) window.showError(window.t('channels.clearCooldownNoneSelected'));
+    return;
+  }
+
+  const channelIds = Array.from(selectedCooldownChannelIds);
+  let successCount = 0;
+  let failCount = 0;
+
+  // 显示加载状态
+  const btn = document.getElementById('btnConfirmClearCooldown');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = window.t('common.processing') || '处理中...';
+
+  for (const channelId of channelIds) {
+    try {
+      const resp = await fetch(`/admin/channels/${channelId}/cooldown`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ duration_ms: 0 })
+      });
+      if (resp.ok) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    } catch (err) {
+      failCount++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  // 刷新数据
+  if (typeof loadChannels === 'function') {
+    await loadChannels();
+  }
+
+  if (failCount === 0) {
+    if (window.showSuccess) {
+      window.showSuccess(window.t('channels.clearCooldownSuccess', { count: successCount }));
+    }
+    closeClearCooldownModal();
+  } else if (successCount === 0) {
+    if (window.showError) {
+      window.showError(window.t('channels.clearCooldownFailed'));
+    }
+  } else {
+    if (window.showNotification) {
+      window.showNotification(
+        window.t('channels.clearCooldownPartial', { success: successCount, fail: failCount }),
+        'warning'
+      );
+    }
+    // 部分成功，刷新列表
+    openClearCooldownModal();
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

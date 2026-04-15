@@ -898,6 +898,18 @@ window.I18N_LOCALES['zh-CN'] = {
   // ============================================================
   // 状态与徽章
   'channels.cooldownStatus': '冷却中',
+  'channels.clearCooldownBtn': '解除冷却',
+  'channels.clearCooldownTitle': '解除渠道冷却',
+  'channels.clearCooldownDesc': '选择需要解除冷却的渠道，点击确定后立即解除冷却状态。',
+  'channels.cooldownChannelCount': '个渠道处于冷却中',
+  'channels.selectAllCooldown': '全选',
+  'channels.deselectAllCooldown': '取消全选',
+  'channels.confirmClearCooldown': '确定解除',
+  'channels.clearCooldownSuccess': '已解除 {count} 个渠道的冷却',
+  'channels.clearCooldownNoneSelected': '请至少选择一个渠道',
+  'channels.noCooldownChannels': '当前没有渠道处于冷却状态',
+  'channels.clearCooldownPartial': '成功 {success} 个，失败 {fail} 个',
+  'channels.clearCooldownFailed': '解除冷却失败',
   'channels.statusNormal': '正常',
   'channels.cooldownBadge': '⚠️ 冷却中·{time}',
   'channels.testThisUrl': '测试此URL',

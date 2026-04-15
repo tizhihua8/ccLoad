@@ -993,30 +993,26 @@ async function copyChannel(id, name) {
   document.getElementById('channelModal').classList.add('show');
 }
 
-function generateCopyName(originalName, depth) {
-  depth = depth || 0;
-  if (depth > 100) return originalName + ' - ' + (window.t('channels.copySuffix')) + ' ' + Date.now();
-
+function generateCopyName(originalName) {
   const suffix = window.t('channels.copySuffix');
-  // 匹配带有 " - 复制" 或 " - Copy" 后缀的名称
-  const copyPattern = new RegExp(`^(.+?)(?:\\s*-\\s*${suffix}(?:\\s*(\\d+))?)?$`);
-  const match = originalName.match(copyPattern);
+  const existingNames = new Set(channels.map(c => c.name.toLowerCase()));
 
-  if (!match) {
-    return originalName + ' - ' + suffix;
+  // 从原始名称中提取基础名（去除已有的 " - 复制 N" 后缀）
+  const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const basePattern = new RegExp(`^(.+?)\\s*-\\s*${escapeRegex(suffix)}(?:\\s*\\d+)?$`);
+  const baseMatch = originalName.match(basePattern);
+  const baseName = baseMatch ? baseMatch[1] : originalName;
+
+  // 循环查找不重复的名称
+  for (let i = 1; i <= 200; i++) {
+    const proposedName = i === 1
+      ? `${baseName} - ${suffix}`
+      : `${baseName} - ${suffix} ${i}`;
+    if (!existingNames.has(proposedName.toLowerCase())) {
+      return proposedName;
+    }
   }
-
-  const baseName = match[1];
-  const copyNumber = match[2] ? parseInt(match[2]) + 1 : 1;
-
-  const proposedName = copyNumber === 1 ? `${baseName} - ${suffix}` : `${baseName} - ${suffix} ${copyNumber}`;
-
-  const existingNames = channels.map(c => c.name.toLowerCase());
-  if (existingNames.includes(proposedName.toLowerCase())) {
-    return generateCopyName(proposedName, depth + 1);
-  }
-
-  return proposedName;
+  return `${baseName} - ${suffix} ${Date.now()}`;
 }
 
 // 拆分模型映射，支持 model:redirect / model->redirect / model
@@ -2013,25 +2009,25 @@ function renderUABodyOps(operations) {
 }
 
 function getBodyOpFieldsHTML(op, index) {
+  const t = window.t || ((k) => k);
   const isSetDelete = op.op === 'set' || op.op === 'delete' || !op.op;
-  const isRenameCopy = op.op === 'rename' || op.op === 'copy';
 
   if (isSetDelete) {
     return `
-      <input type="text" class="ua-bodyop-path form-input" placeholder="Path (e.g. stream)"
+      <input type="text" class="ua-bodyop-path form-input" placeholder="${t('channels.uaBodyOpPath')}"
              value="${escapeHtml(op.path || '')}">
-      <input type="text" class="ua-bodyop-value form-input" placeholder="Value (template supported)"
+      <input type="text" class="ua-bodyop-value form-input" placeholder="${t('channels.uaBodyOpValue')}"
              value="${escapeHtml(op.value || '')}" ${op.op === 'delete' ? 'disabled' : ''}>
-      <input type="text" class="ua-bodyop-condition form-input" placeholder="Condition (e.g. {{gt .MaxTokens 4096}})"
+      <input type="text" class="ua-bodyop-condition form-input" placeholder="${t('channels.uaBodyOpCondition')}"
              value="${escapeHtml(op.condition || '')}">
     `;
   } else {
     return `
-      <input type="text" class="ua-bodyop-from form-input" placeholder="From path"
+      <input type="text" class="ua-bodyop-from form-input" placeholder="${t('channels.uaBodyOpFrom')}"
              value="${escapeHtml(op.from || '')}">
-      <input type="text" class="ua-bodyop-to form-input" placeholder="To path"
+      <input type="text" class="ua-bodyop-to form-input" placeholder="${t('channels.uaBodyOpTo')}"
              value="${escapeHtml(op.to || '')}">
-      <input type="text" class="ua-bodyop-condition form-input" placeholder="Condition"
+      <input type="text" class="ua-bodyop-condition form-input" placeholder="${t('channels.uaBodyOpCondition')}"
              value="${escapeHtml(op.condition || '')}">
     `;
   }

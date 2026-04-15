@@ -103,6 +103,8 @@
               </div>
 
               <div class="channel-toolbar-actions">
+                <button id="btn_clear_cooldown" type="button" class="btn btn-warning" style="padding: 8px 16px; font-size: 14px;"
+                  data-i18n="channels.clearCooldownBtn">解除冷却</button>
                 <button id="btn_sort" type="button" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;"
                   data-i18n="channels.sortBtn">排序</button>
                 <button id="btn_filter" type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;"
@@ -912,6 +914,42 @@
     </div>
   </div>
 
+  <!-- 解除冷却模态框 -->
+  <div id="clearCooldownModal" class="modal">
+    <div class="modal-content modal-content--lg">
+      <div class="modal-header">
+        <h2 class="modal-title" data-i18n="channels.clearCooldownTitle">解除渠道冷却</h2>
+        <button type="button" class="close-btn" data-action="close-clear-cooldown-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description" data-i18n="channels.clearCooldownDesc" style="margin-bottom: 16px; color: var(--neutral-600);">
+          选择需要解除冷却的渠道，点击确定后立即解除冷却状态。
+        </p>
+        <div class="filter-info" style="margin-bottom: 12px; font-size: 14px; color: var(--neutral-500);">
+          <span id="cooldownChannelCount">0</span> <span data-i18n="channels.cooldownChannelCount">个渠道处于冷却中</span>
+        </div>
+        <div id="cooldownChannelList" class="cooldown-channel-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--neutral-200); border-radius: 8px;">
+          <!-- 动态渲染冷却中的渠道列表 -->
+        </div>
+      </div>
+      <div class="form-actions">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button type="button" class="btn btn-secondary" id="btnSelectAllCooldown" data-i18n="channels.selectAllCooldown">
+            全选
+          </button>
+          <button type="button" class="btn btn-secondary" id="btnDeselectAllCooldown" data-i18n="channels.deselectAllCooldown">
+            取消全选
+          </button>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <button type="button" class="btn btn-secondary" data-action="close-clear-cooldown-modal"
+            data-i18n="common.cancel">取消</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmClearCooldown" data-action="confirm-clear-cooldown"
+            data-i18n="channels.confirmClearCooldown">确定解除</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- HTML模板定义 (分离HTML与JS) -->
   <template id="tpl-key-row">

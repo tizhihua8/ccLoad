@@ -33,7 +33,8 @@ func (s *Server) HandleSetChannelCooldown(c *gin.Context) {
 		return
 	}
 
-	// 精确计数(手动设置渠道冷却
+	// [INFO] 修复：使渠道缓存失效，确保前端能立即看到冷却状态变化
+	s.InvalidateChannelListCache()
 
 	RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("渠道已冷却 %d 毫秒", req.DurationMs)})
 }
