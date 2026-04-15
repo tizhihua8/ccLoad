@@ -653,7 +653,7 @@ func (s *Server) forwardAttempt(
 
 	// 应用渠道级请求体重写（BodyOperations）
 	// 在协议转换后、转发前执行，确保能访问最终请求体
-	if cfg.UAConfig != nil && len(cfg.UAConfig.BodyOperations) > 0 {
+	if cfg.UAConfig != nil && cfg.UAConfig.BodyRewriteEnabled && len(cfg.UAConfig.BodyOperations) > 0 {
 		rewriteCtx := BuildBodyRewriteContext(convertedBody)
 		// 从请求上下文中补充额外信息
 		rewriteCtx.OriginalModel = reqCtx.originalModel
