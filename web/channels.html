@@ -685,7 +685,14 @@
 
       <!-- Body 操作列表（独立于模式） -->
       <div id="uaBodyOpsContainer" class="form-group">
-        <label class="form-label" data-i18n="channels.uaBodyOperations">请求体重写（Body Operations）</label>
+        <div class="ua-bodyops-header">
+          <label class="form-label" data-i18n="channels.uaBodyOperations">请求体重写（Body Operations）</label>
+          <label class="switch switch--sm">
+            <input type="checkbox" id="uaBodyRewriteEnabled">
+            <span class="slider"></span>
+            <span class="switch-label" data-i18n="channels.uaBodyRewriteEnabled">启用请求体重写</span>
+          </label>
+        </div>
         <div class="ua-bodyops-hint" data-i18n="channels.uaBodyOperationsHint">
           支持条件模板：{{if gt .MaxTokens 4096}}true{{end}}。可用变量：Model, MaxTokens, Temperature, Stream
         </div>

@@ -406,7 +406,12 @@ async function saveChannel(event) {
     models: models,
     enabled: document.getElementById('channelEnabled').checked,
     scheduled_check_enabled: document.getElementById('channelScheduledCheckEnabled').checked,
-    scheduled_check_model: document.getElementById('channelScheduledCheckModel').value.trim()
+    scheduled_check_model: document.getElementById('channelScheduledCheckModel').value.trim(),
+    // 复制渠道时保留 UA 配置（仅创建新渠道时传递）
+    ...(editingChannelId ? {} : {
+      ua_rewrite_enabled: currentChannelUARewriteEnabled || false,
+      ua_config: currentChannelUAConfig || undefined
+    })
   };
 
   if (!formData.name || !formData.url || !formData.api_key || formData.models.length === 0) {
@@ -955,6 +960,10 @@ async function copyChannel(id, name) {
   document.getElementById('channelEnabled').checked = true;
   document.getElementById('channelScheduledCheckEnabled').checked = !!channel.scheduled_check_enabled;
   document.getElementById('channelScheduledCheckModel').value = channel.scheduled_check_model || '';
+
+  // 复制 UA 配置（新增）
+  currentChannelUAConfig = channel.ua_config || null;
+  currentChannelUARewriteEnabled = channel.ua_rewrite_enabled || false;
 
   // 加载模型配置（新格式：models是 {model, redirect_model} 数组）
   redirectTableData = (channel.models || []).map(m => ({
@@ -1766,6 +1775,12 @@ function loadUAConfig(channel) {
     } else {
       renderUABodyOps([]);
     }
+
+    // 加载请求体重写独立开关（默认启用，如果有 body_operations）
+    const bodyRewriteEnabled = document.getElementById('uaBodyRewriteEnabled');
+    if (bodyRewriteEnabled) {
+      bodyRewriteEnabled.checked = channel.ua_config.body_rewrite_enabled ?? (channel.ua_config.body_operations?.length > 0);
+    }
   } else {
     // 旧字段兼容逻辑
     if (channel.ua_override) {
@@ -1907,7 +1922,10 @@ function collectUAConfig() {
     }
   });
 
-  return { mode, items, headers, bodyOperations };
+  // 收集请求体重写独立开关
+  const bodyRewriteEnabled = document.getElementById('uaBodyRewriteEnabled')?.checked ?? false;
+
+  return { mode, items, headers, bodyOperations, bodyRewriteEnabled };
 }
 
 async function saveUAConfig() {
@@ -1918,7 +1936,7 @@ async function saveUAConfig() {
   // [FIX] 只发送 UA 配置相关字段，触发后端部分更新逻辑
   // 避免需要提供完整的渠道信息（name, url, api_key 等）
   const saveData = {
-    ua_rewrite_enabled: config.mode !== 'passthrough' || config.bodyOperations.length > 0,
+    ua_rewrite_enabled: config.mode !== 'passthrough' || config.bodyOperations.length > 0 || config.bodyRewriteEnabled,
     ua_override: '',
     ua_prefix: '',
     ua_suffix: '',
@@ -1926,7 +1944,8 @@ async function saveUAConfig() {
       mode: config.mode,
       items: config.items.map(i => ({ field: i.key, value: i.value })),
       headers: config.headers.map(h => ({ name: h.key, action: 'set', value: h.value })),
-      body_operations: config.bodyOperations
+      body_operations: config.bodyOperations,
+      body_rewrite_enabled: config.bodyRewriteEnabled
     }
   };
 
@@ -1961,16 +1980,17 @@ function renderUABodyOps(operations) {
   const list = document.getElementById('uaBodyOpsList');
   if (!list) return;
 
+  const t = window.t || ((k) => k);
   list.innerHTML = uaBodyOps.map((op, index) => `
     <div class="ua-bodyop-row" data-index="${index}">
       <select class="ua-bodyop-type form-input" onchange="onBodyOpTypeChange(${index})">
-        <option value="set" ${op.op === 'set' ? 'selected' : ''}>set</option>
-        <option value="delete" ${op.op === 'delete' ? 'selected' : ''}>delete</option>
-        <option value="rename" ${op.op === 'rename' ? 'selected' : ''}>rename</option>
-        <option value="copy" ${op.op === 'copy' ? 'selected' : ''}>copy</option>
+        <option value="set" ${op.op === 'set' ? 'selected' : ''}>${t('channels.uaBodyOpSet')}</option>
+        <option value="delete" ${op.op === 'delete' ? 'selected' : ''}>${t('channels.uaBodyOpDelete')}</option>
+        <option value="rename" ${op.op === 'rename' ? 'selected' : ''}>${t('channels.uaBodyOpRename')}</option>
+        <option value="copy" ${op.op === 'copy' ? 'selected' : ''}>${t('channels.uaBodyOpCopy')}</option>
       </select>
       ${getBodyOpFieldsHTML(op, index)}
-      <button type="button" class="btn btn-icon" onclick="removeUABodyOp(${index})" title="删除">
+      <button type="button" class="btn btn-icon" onclick="removeUABodyOp(${index})" title="${t('common.delete') || '删除'}">
         ×
       </button>
     </div>

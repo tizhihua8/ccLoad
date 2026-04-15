@@ -2698,6 +2698,17 @@
     }
 
 /* UA BodyOps Styles */
+.ua-bodyops-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ua-bodyops-header .form-label {
+  margin-bottom: 0;
+}
+
 .ua-bodyops-list {
   display: flex;
   flex-direction: column;

@@ -413,10 +413,11 @@ type UAHeaderItem struct {
 
 // UAConfig UA 覆写完整配置结构
 type UAConfig struct {
-	Mode            UAConfigMode      `json:"mode"`                        // 工作模式: passthrough | override | append | headers
-	Items           []UAConfigItem    `json:"items,omitempty"`             // 覆写/追加模式的字段列表
-	Headers         []UAHeaderItem    `json:"headers,omitempty"`           // Headers 模式的请求头列表
-	BodyOperations  []BodyOperation   `json:"body_operations,omitempty"`   // 请求体重写操作列表
+	Mode               UAConfigMode      `json:"mode"`                        // 工作模式: passthrough | override | append | headers
+	Items              []UAConfigItem    `json:"items,omitempty"`             // 覆写/追加模式的字段列表
+	Headers            []UAHeaderItem    `json:"headers,omitempty"`           // Headers 模式的请求头列表
+	BodyOperations     []BodyOperation   `json:"body_operations,omitempty"`   // 请求体重写操作列表
+	BodyRewriteEnabled bool              `json:"body_rewrite_enabled,omitempty"` // 请求体重写独立开关
 }
 
 // IsEnabled 检查 UA 配置是否启用（非透传模式且有内容，或有请求体操作）

@@ -26,6 +26,13 @@ type ChannelRequest struct {
 	ScheduledCheckEnabled bool               `json:"scheduled_check_enabled"`
 	ScheduledCheckModel   string             `json:"scheduled_check_model"`
 	DailyCostLimit        float64            `json:"daily_cost_limit"` // 每日成本限额（美元），0表示无限制
+
+	// UA 覆写配置（支持创建时直接设置）
+	UARewriteEnabled bool             `json:"ua_rewrite_enabled"`
+	UAOverride       string           `json:"ua_override,omitempty"`
+	UAPrefix         string           `json:"ua_prefix,omitempty"`
+	UASuffix         string           `json:"ua_suffix,omitempty"`
+	UAConfig         *model.UAConfig  `json:"ua_config,omitempty"`
 }
 
 func validateChannelBaseURL(raw string) (string, error) {
@@ -183,6 +190,12 @@ func (cr *ChannelRequest) ToConfig() *model.Config {
 		ScheduledCheckEnabled: cr.ScheduledCheckEnabled,
 		ScheduledCheckModel:   cr.ScheduledCheckModel,
 		DailyCostLimit:        cr.DailyCostLimit,
+		// UA 覆写配置（复制渠道时保留）
+		UARewriteEnabled:      cr.UARewriteEnabled,
+		UAOverride:            cr.UAOverride,
+		UAPrefix:              cr.UAPrefix,
+		UASuffix:              cr.UASuffix,
+		UAConfig:              cr.UAConfig,
 	}
 }
 

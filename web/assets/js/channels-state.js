@@ -56,6 +56,10 @@ let virtualScrollState = {
   filteredIndices: [] // 存储筛选后的索引列表（支持状态筛选）
 };
 
+// UA 配置状态（用于复制渠道时保留 UA 配置）
+let currentChannelUAConfig = null;
+let currentChannelUARewriteEnabled = false;
+
 // 清除渠道缓存（在增删改操作后调用）
 function clearChannelsCache() {
   channelsCache = {};

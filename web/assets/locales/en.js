@@ -942,6 +942,7 @@ window.I18N_LOCALES['en'] = {
   'channels.uaBodyOpFrom': 'Source Path',
   'channels.uaBodyOpTo': 'Target Path',
   'channels.uaBodyOpCondition': 'Condition Template (empty = always execute)',
+  'channels.uaBodyRewriteEnabled': 'Enable Body Rewrite',
   // Card Display
   'channels.modelPrefix': 'Models:',
   'channels.urlLabel': 'URL:',

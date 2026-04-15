@@ -942,6 +942,7 @@ window.I18N_LOCALES['zh-CN'] = {
   'channels.uaBodyOpFrom': '源路径',
   'channels.uaBodyOpTo': '目标路径',
   'channels.uaBodyOpCondition': '条件模板（为空则总是执行）',
+  'channels.uaBodyRewriteEnabled': '启用请求体重写',
   // 卡片显示
   'channels.modelPrefix': '模型:',
   'channels.urlLabel': 'URL:',
