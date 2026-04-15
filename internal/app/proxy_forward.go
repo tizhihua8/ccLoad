@@ -651,6 +651,25 @@ func (s *Server) forwardAttempt(
 		}
 	}
 
+	// 应用渠道级请求体重写（BodyOperations）
+	// 在协议转换后、转发前执行，确保能访问最终请求体
+	if cfg.UAConfig != nil && len(cfg.UAConfig.BodyOperations) > 0 {
+		rewriteCtx := BuildBodyRewriteContext(convertedBody)
+		// 从请求上下文中补充额外信息
+		rewriteCtx.OriginalModel = reqCtx.originalModel
+		if rewriteCtx.Model == "" {
+			rewriteCtx.Model = actualModel
+		}
+
+		newBody, rewriteErr := applyBodyOperations(convertedBody, cfg.UAConfig.BodyOperations, rewriteCtx)
+		if rewriteErr == nil {
+			convertedBody = newBody
+		} else {
+			// 重写失败记录警告但不阻断请求（保守策略）
+			log.Printf("[WARN] [BodyRewrite] 渠道ID=%d 请求体重写失败: %v", cfg.ID, rewriteErr)
+		}
+	}
+
 	// 转发请求（传递实际的API Key字符串和观测回调）
 	// [FIX] 2026-01: 使用传入的 requestPath（可能已替换模型名）而非 reqCtx.requestPath
 	res, duration, err := s.forwardOnceAsync(ctx, cfg, selectedKey, reqCtx.requestMethod,

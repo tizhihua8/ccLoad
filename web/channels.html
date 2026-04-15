@@ -719,6 +719,19 @@
           data-i18n="channels.addUAHeader">添加请求头</button>
       </div>
 
+      <!-- Body 操作列表（独立于模式） -->
+      <div id="uaBodyOpsContainer" class="form-group">
+        <label class="form-label" data-i18n="channels.uaBodyOperations">请求体重写（Body Operations）</label>
+        <div class="ua-bodyops-hint" data-i18n="channels.uaBodyOperationsHint">
+          支持条件模板：{{if gt .MaxTokens 4096}}true{{end}}。可用变量：Model, MaxTokens, Temperature, Stream
+        </div>
+        <div id="uaBodyOpsList" class="ua-bodyops-list">
+          <!-- 动态添加的 body 操作行 -->
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" data-action="add-ua-bodyop"
+          data-i18n="channels.addUABodyOp">添加 Body 操作</button>
+      </div>
+
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" data-action="close-ua-modal"
           data-i18n="common.cancel">取消</button>

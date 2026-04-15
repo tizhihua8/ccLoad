@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -357,6 +358,32 @@ func extractVersionNumbers(model string) []int {
 	return nums
 }
 
+// BodyOperationType 请求体操作类型
+type BodyOperationType string
+
+const (
+	// BodyOpSet 设置字段值
+	BodyOpSet BodyOperationType = "set"
+	// BodyOpDelete 删除字段
+	BodyOpDelete BodyOperationType = "delete"
+	// BodyOpRename 重命名字段
+	BodyOpRename BodyOperationType = "rename"
+	// BodyOpCopy 复制字段
+	BodyOpCopy BodyOperationType = "copy"
+)
+
+// BodyOperation 请求体重写操作定义
+// 支持条件模板（Go text/template语法），条件为 true 时执行
+// 可用变量: Model, OriginalModel, MaxTokens, Temperature, Stream 等
+type BodyOperation struct {
+	Op        string `json:"op"`                  // 操作类型: set/delete/rename/copy
+	Path      string `json:"path,omitempty"`      // JSON 路径，如 "stream", "max_tokens"
+	From      string `json:"from,omitempty"`      // rename/copy 的源路径
+	To        string `json:"to,omitempty"`        // rename/copy 的目标路径
+	Value     string `json:"value,omitempty"`     // set 的值（支持模板语法，如 "{{if gt .MaxTokens 4096}}true{{else}}false{{end}}"）
+	Condition string `json:"condition,omitempty"` // 条件模板，为空时总是执行
+}
+
 // UAConfigMode UA 覆写配置模式
 type UAConfigMode string
 
@@ -386,15 +413,20 @@ type UAHeaderItem struct {
 
 // UAConfig UA 覆写完整配置结构
 type UAConfig struct {
-	Mode    UAConfigMode   `json:"mode"`              // 工作模式: passthrough | override | append | headers
-	Items   []UAConfigItem `json:"items,omitempty"`   // 覆写/追加模式的字段列表
-	Headers []UAHeaderItem `json:"headers,omitempty"` // Headers 模式的请求头列表
+	Mode            UAConfigMode      `json:"mode"`                        // 工作模式: passthrough | override | append | headers
+	Items           []UAConfigItem    `json:"items,omitempty"`             // 覆写/追加模式的字段列表
+	Headers         []UAHeaderItem    `json:"headers,omitempty"`           // Headers 模式的请求头列表
+	BodyOperations  []BodyOperation   `json:"body_operations,omitempty"`   // 请求体重写操作列表
 }
 
-// IsEnabled 检查 UA 配置是否启用（非透传模式且有内容）
+// IsEnabled 检查 UA 配置是否启用（非透传模式且有内容，或有请求体操作）
 func (u *UAConfig) IsEnabled() bool {
 	if u == nil {
 		return false
+	}
+	// 有请求体重写操作时也视为启用
+	if len(u.BodyOperations) > 0 {
+		return true
 	}
 	switch u.Mode {
 	case UAConfigModeOverride, UAConfigModeAppend:
@@ -410,6 +442,12 @@ func (u *UAConfig) IsEnabled() bool {
 func (u *UAConfig) Validate() error {
 	if u == nil {
 		return nil
+	}
+	// 验证 BodyOperations
+	for i, op := range u.BodyOperations {
+		if err := op.Validate(); err != nil {
+			return fmt.Errorf("body operation[%d]: %w", i, err)
+		}
 	}
 	switch u.Mode {
 	case UAConfigModePassThrough:
@@ -439,5 +477,33 @@ func (u *UAConfig) Validate() error {
 		return nil
 	default:
 		return errors.New("invalid mode")
+	}
+}
+
+// Validate 验证 BodyOperation 是否有效
+func (b BodyOperation) Validate() error {
+	switch BodyOperationType(b.Op) {
+	case BodyOpSet:
+		if b.Path == "" {
+			return errors.New("set operation requires path")
+		}
+		return nil
+	case BodyOpDelete:
+		if b.Path == "" {
+			return errors.New("delete operation requires path")
+		}
+		return nil
+	case BodyOpRename:
+		if b.From == "" || b.To == "" {
+			return errors.New("rename operation requires from and to")
+		}
+		return nil
+	case BodyOpCopy:
+		if b.From == "" || b.To == "" {
+			return errors.New("copy operation requires from and to")
+		}
+		return nil
+	default:
+		return fmt.Errorf("invalid operation type: %s", b.Op)
 	}
 }

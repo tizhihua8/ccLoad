@@ -1886,6 +1886,7 @@ function collectChannelUAConfigForSave() {
 let currentUAConfigChannelId = null;
 let uaItems = [];
 let uaHeaders = [];
+let uaBodyOps = []; // Body operations 列表
 
 function openUAConfigModal(channelId) {
   currentUAConfigChannelId = channelId;
@@ -1920,28 +1921,51 @@ function closeUAConfigModal() {
 }
 
 function loadUAConfig(channel) {
-  // 解析现有 UA 配置（如果有的话）
-  // 目前从旧字段迁移：ua_override, ua_prefix, ua_suffix
   uaItems = [];
   uaHeaders = [];
 
   const modeSelect = document.getElementById('uaConfigMode');
   if (!modeSelect) return;
 
-  // 根据旧配置推断模式
-  if (channel.ua_override) {
-    modeSelect.value = 'override';
-    uaItems.push({ key: 'User-Agent', value: channel.ua_override });
-  } else if (channel.ua_prefix || channel.ua_suffix) {
-    modeSelect.value = 'append';
-    if (channel.ua_prefix) {
-      uaItems.push({ key: 'Prefix', value: channel.ua_prefix });
+  // 优先从 ua_config 加载
+  if (channel.ua_config) {
+    modeSelect.value = channel.ua_config.mode || 'passthrough';
+
+    // 加载 items
+    if (channel.ua_config.items) {
+      uaItems = channel.ua_config.items.map(item => ({
+        key: item.field || '',
+        value: item.value || ''
+      }));
     }
-    if (channel.ua_suffix) {
-      uaItems.push({ key: 'Suffix', value: channel.ua_suffix });
+
+    // 加载 headers
+    if (channel.ua_config.headers) {
+      uaHeaders = channel.ua_config.headers.map(h => ({
+        key: h.name || '',
+        value: h.value || ''
+      }));
+    }
+
+    // 加载 body_operations
+    if (channel.ua_config.body_operations) {
+      renderUABodyOps(channel.ua_config.body_operations);
+    } else {
+      renderUABodyOps([]);
     }
   } else {
-    modeSelect.value = 'passthrough';
+    // 旧字段兼容逻辑
+    if (channel.ua_override) {
+      modeSelect.value = 'override';
+      uaItems.push({ key: 'User-Agent', value: channel.ua_override });
+    } else if (channel.ua_prefix || channel.ua_suffix) {
+      modeSelect.value = 'append';
+      if (channel.ua_prefix) uaItems.push({ key: 'Prefix', value: channel.ua_prefix });
+      if (channel.ua_suffix) uaItems.push({ key: 'Suffix', value: channel.ua_suffix });
+    } else {
+      modeSelect.value = 'passthrough';
+    }
+    renderUABodyOps([]);
   }
 
   syncUAConfigUI();
@@ -2044,7 +2068,33 @@ function collectUAConfig() {
     }
   });
 
-  return { mode, items, headers };
+  // 收集 body operations
+  const bodyOperations = [];
+  document.querySelectorAll('.ua-bodyop-row').forEach(row => {
+    const opSelect = row.querySelector('.ua-bodyop-type');
+    const pathInput = row.querySelector('.ua-bodyop-path');
+    const fromInput = row.querySelector('.ua-bodyop-from');
+    const toInput = row.querySelector('.ua-bodyop-to');
+    const valueInput = row.querySelector('.ua-bodyop-value');
+    const conditionInput = row.querySelector('.ua-bodyop-condition');
+
+    if (opSelect) {
+      const op = {
+        op: opSelect.value,
+        path: pathInput?.value?.trim() || '',
+        from: fromInput?.value?.trim() || '',
+        to: toInput?.value?.trim() || '',
+        value: valueInput?.value?.trim() || '',
+        condition: conditionInput?.value?.trim() || ''
+      };
+      // 只添加有效的操作
+      if (op.op === 'set' && op.path) bodyOperations.push(op);
+      else if (op.op === 'delete' && op.path) bodyOperations.push(op);
+      else if ((op.op === 'rename' || op.op === 'copy') && op.from && op.to) bodyOperations.push(op);
+    }
+  });
+
+  return { mode, items, headers, bodyOperations };
 }
 
 async function saveUAConfig() {
@@ -2052,34 +2102,25 @@ async function saveUAConfig() {
 
   const config = collectUAConfig();
 
-  // 转换为后端格式（兼容旧字段）
-  let uaRewriteEnabled = false;
-  let uaOverride = '';
-  let uaPrefix = '';
-  let uaSuffix = '';
-
-  if (config.mode === 'override') {
-    uaRewriteEnabled = true;
-    const uaItem = config.items.find(i => i.key.toLowerCase() === 'user-agent');
-    uaOverride = uaItem ? uaItem.value : '';
-  } else if (config.mode === 'append') {
-    uaRewriteEnabled = true;
-    const prefixItem = config.items.find(i => i.key.toLowerCase() === 'prefix');
-    const suffixItem = config.items.find(i => i.key.toLowerCase() === 'suffix');
-    uaPrefix = prefixItem ? prefixItem.value : '';
-    uaSuffix = suffixItem ? suffixItem.value : '';
-  }
+  // 保存时包含 body_operations
+  const saveData = {
+    ua_rewrite_enabled: config.mode !== 'passthrough' || config.bodyOperations.length > 0,
+    ua_override: '',
+    ua_prefix: '',
+    ua_suffix: '',
+    ua_config: {
+      mode: config.mode,
+      items: config.items.map(i => ({ field: i.key, value: i.value })),
+      headers: config.headers.map(h => ({ name: h.key, action: 'set', value: h.value })),
+      body_operations: config.bodyOperations
+    }
+  };
 
   try {
     const resp = await fetchAPIWithAuth(`/admin/channels/${currentUAConfigChannelId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ua_rewrite_enabled: uaRewriteEnabled,
-        ua_override: uaOverride,
-        ua_prefix: uaPrefix,
-        ua_suffix: uaSuffix
-      })
+      body: JSON.stringify(saveData)
     });
 
     if (!resp.success) throw new Error(resp.error || window.t('common.failed'));
@@ -2101,6 +2142,88 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function renderUABodyOps(operations) {
+  uaBodyOps = operations || [];
+  const list = document.getElementById('uaBodyOpsList');
+  if (!list) return;
+
+  list.innerHTML = uaBodyOps.map((op, index) => `
+    <div class="ua-bodyop-row" data-index="${index}">
+      <select class="ua-bodyop-type form-input" onchange="onBodyOpTypeChange(${index})">
+        <option value="set" ${op.op === 'set' ? 'selected' : ''}>set</option>
+        <option value="delete" ${op.op === 'delete' ? 'selected' : ''}>delete</option>
+        <option value="rename" ${op.op === 'rename' ? 'selected' : ''}>rename</option>
+        <option value="copy" ${op.op === 'copy' ? 'selected' : ''}>copy</option>
+      </select>
+      ${getBodyOpFieldsHTML(op, index)}
+      <button type="button" class="btn btn-icon" onclick="removeUABodyOp(${index})" title="删除">
+        ×
+      </button>
+    </div>
+  `).join('');
+}
+
+function getBodyOpFieldsHTML(op, index) {
+  const isSetDelete = op.op === 'set' || op.op === 'delete' || !op.op;
+  const isRenameCopy = op.op === 'rename' || op.op === 'copy';
+
+  if (isSetDelete) {
+    return `
+      <input type="text" class="ua-bodyop-path form-input" placeholder="Path (e.g. stream)"
+             value="${escapeHtml(op.path || '')}">
+      <input type="text" class="ua-bodyop-value form-input" placeholder="Value (template supported)"
+             value="${escapeHtml(op.value || '')}" ${op.op === 'delete' ? 'disabled' : ''}>
+      <input type="text" class="ua-bodyop-condition form-input" placeholder="Condition (e.g. {{gt .MaxTokens 4096}})"
+             value="${escapeHtml(op.condition || '')}">
+    `;
+  } else {
+    return `
+      <input type="text" class="ua-bodyop-from form-input" placeholder="From path"
+             value="${escapeHtml(op.from || '')}">
+      <input type="text" class="ua-bodyop-to form-input" placeholder="To path"
+             value="${escapeHtml(op.to || '')}">
+      <input type="text" class="ua-bodyop-condition form-input" placeholder="Condition"
+             value="${escapeHtml(op.condition || '')}">
+    `;
+  }
+}
+
+function addUABodyOp() {
+  uaBodyOps.push({ op: 'set', path: '', value: '', condition: '' });
+  renderUABodyOps(uaBodyOps);
+}
+
+function removeUABodyOp(index) {
+  uaBodyOps.splice(index, 1);
+  renderUABodyOps(uaBodyOps);
+}
+
+function onBodyOpTypeChange(index) {
+  const row = document.querySelector(`.ua-bodyop-row[data-index="${index}"]`);
+  if (!row) return;
+
+  const typeSelect = row.querySelector('.ua-bodyop-type');
+  const newType = typeSelect?.value || 'set';
+
+  // 保留已有值
+  const path = row.querySelector('.ua-bodyop-path')?.value || '';
+  const value = row.querySelector('.ua-bodyop-value')?.value || '';
+  const condition = row.querySelector('.ua-bodyop-condition')?.value || '';
+  const from = row.querySelector('.ua-bodyop-from')?.value || '';
+  const to = row.querySelector('.ua-bodyop-to')?.value || '';
+
+  uaBodyOps[index] = {
+    op: newType,
+    path: path,
+    value: value,
+    condition: condition,
+    from: from,
+    to: to
+  };
+
+  renderUABodyOps(uaBodyOps);
+}
+
 // 绑定 UA 模态框事件
 document.addEventListener('DOMContentLoaded', () => {
   // UA 配置模式切换
@@ -2117,6 +2240,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 添加字段/请求头
   document.querySelector('[data-action="add-ua-item"]')?.addEventListener('click', addUAItem);
   document.querySelector('[data-action="add-ua-header"]')?.addEventListener('click', addUAHeader);
+
+  // 添加 Body Operation
+  document.querySelector('[data-action="add-ua-bodyop"]')?.addEventListener('click', addUABodyOp);
 
   // 保存
   document.querySelector('[data-action="save-ua-config"]')?.addEventListener('click', saveUAConfig);
