@@ -18,8 +18,8 @@ WORKDIR /app
 # ============================================
 FROM base AS deps
 
-# 设置Go模块代理
-ENV GOPROXY=https://proxy.golang.org,direct
+# 设置Go模块代理（国内镜像）
+ENV GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
 
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
