@@ -220,15 +220,6 @@ function initChannelEditorActions() {
     scheduledCheckCheckbox.dataset.bound = '1';
   }
 
-  // UA 配置事件绑定
-  const uaModeSelect = document.getElementById('channelUAConfigMode');
-  if (uaModeSelect && !uaModeSelect.dataset.bound) {
-    uaModeSelect.addEventListener('change', () => {
-      syncChannelUAConfigUI();
-    });
-    uaModeSelect.dataset.bound = '1';
-  }
-
   ensureScheduledCheckModelCombobox();
 }
 
@@ -322,14 +313,8 @@ async function editChannel(id) {
   document.getElementById('channelPriority').value = channel.priority;
   document.getElementById('channelDailyCostLimit').value = channel.daily_cost_limit || 0;
 
-  // 初始化 UA 配置 UI（新选择式界面）
-  initChannelUAConfigUI(channel);
+  // UA 配置已移至列表页 UA 按钮打开模态框
 
-  // 保留旧字段向后兼容（已隐藏）
-  document.getElementById('channelUARewriteEnabled').checked = !!channel.ua_rewrite_enabled;
-  document.getElementById('channelUAOverride').value = channel.ua_override || '';
-  document.getElementById('channelUAPrefix').value = channel.ua_prefix || '';
-  document.getElementById('channelUASuffix').value = channel.ua_suffix || '';
   document.getElementById('channelEnabled').checked = channel.enabled;
   document.getElementById('channelScheduledCheckEnabled').checked = !!channel.scheduled_check_enabled;
   document.getElementById('channelScheduledCheckModel').value = channel.scheduled_check_model || '';
@@ -408,8 +393,7 @@ async function saveChannel(event) {
   const channelType = document.querySelector('input[name="channelType"]:checked')?.value || 'anthropic';
   const keyStrategy = document.querySelector('input[name="keyStrategy"]:checked')?.value || 'sequential';
 
-  // 收集 UA 配置（新 UI 方式）
-  const uaConfig = collectChannelUAConfigForSave();
+  // UA 配置已移至列表页 UA 按钮打开模态框，此处不再收集
 
   const formData = {
     name: document.getElementById('channelName').value.trim(),
@@ -419,10 +403,6 @@ async function saveChannel(event) {
     key_strategy: keyStrategy,
     priority: parseInt(document.getElementById('channelPriority').value) || 0,
     daily_cost_limit: parseFloat(document.getElementById('channelDailyCostLimit').value) || 0,
-    ua_rewrite_enabled: uaConfig.uaRewriteEnabled,
-    ua_override: uaConfig.uaOverride,
-    ua_prefix: uaConfig.uaPrefix,
-    ua_suffix: uaConfig.uaSuffix,
     models: models,
     enabled: document.getElementById('channelEnabled').checked,
     scheduled_check_enabled: document.getElementById('channelScheduledCheckEnabled').checked,
@@ -1712,173 +1692,6 @@ function addCommonModels() {
 }
 
 // ============================================================================
-// 渠道编辑表单中的 UA 配置
-// ============================================================================
-
-let channelUAItems = [];
-let channelUAHeaders = [];
-
-function initChannelUAConfigUI(channel) {
-  channelUAItems = [];
-  channelUAHeaders = [];
-
-  const modeSelect = document.getElementById('channelUAConfigMode');
-  if (!modeSelect) return;
-
-  // 根据旧配置推断模式
-  if (!channel.ua_rewrite_enabled) {
-    modeSelect.value = 'passthrough';
-  } else if (channel.ua_override) {
-    modeSelect.value = 'override';
-    channelUAItems.push({ key: 'User-Agent', value: channel.ua_override });
-  } else if (channel.ua_prefix || channel.ua_suffix) {
-    modeSelect.value = 'append';
-    if (channel.ua_prefix) {
-      channelUAItems.push({ key: 'Prefix', value: channel.ua_prefix });
-    }
-    if (channel.ua_suffix) {
-      channelUAItems.push({ key: 'Suffix', value: channel.ua_suffix });
-    }
-  } else {
-    modeSelect.value = 'passthrough';
-  }
-
-  syncChannelUAConfigUI();
-}
-
-function syncChannelUAConfigUI() {
-  const mode = document.getElementById('channelUAConfigMode')?.value || 'passthrough';
-  const itemsContainer = document.getElementById('channelUAItemsContainer');
-  const headersContainer = document.getElementById('channelUAHeadersContainer');
-
-  if (itemsContainer) {
-    itemsContainer.classList.toggle('hidden', mode === 'passthrough' || mode === 'headers');
-  }
-  if (headersContainer) {
-    headersContainer.classList.toggle('hidden', mode !== 'headers');
-  }
-
-  renderChannelUAItems();
-  renderChannelUAHeaders();
-}
-
-function renderChannelUAItems() {
-  const list = document.getElementById('channelUAItemsList');
-  if (!list) return;
-
-  if (channelUAItems.length === 0) {
-    list.innerHTML = '<div style="color: var(--gray-400); font-size: 12px;">No fields</div>';
-    return;
-  }
-
-  list.innerHTML = channelUAItems.map((item, index) => `
-    <div class="ua-item-row" style="display: flex; gap: 4px; margin-bottom: 4px; align-items: center;">
-      <input type="text" class="form-input" placeholder="Field" value="${escapeUAHtml(item.key)}"
-        onchange="updateChannelUAItem(${index}, 'key', this.value)" style="flex: 1; min-width: 60px; padding: 4px 8px; font-size: 12px;">
-      <input type="text" class="form-input" placeholder="Value" value="${escapeUAHtml(item.value)}"
-        onchange="updateChannelUAItem(${index}, 'value', this.value)" style="flex: 2; min-width: 100px; padding: 4px 8px; font-size: 12px;">
-      <button type="button" class="btn btn-danger btn-sm" onclick="removeChannelUAItem(${index})" style="padding: 2px 6px; font-size: 12px;">×</button>
-    </div>
-  `).join('');
-}
-
-function renderChannelUAHeaders() {
-  const list = document.getElementById('channelUAHeadersList');
-  if (!list) return;
-
-  if (channelUAHeaders.length === 0) {
-    list.innerHTML = '<div style="color: var(--gray-400); font-size: 12px;">No headers</div>';
-    return;
-  }
-
-  list.innerHTML = channelUAHeaders.map((header, index) => `
-    <div class="ua-header-row" style="display: flex; gap: 4px; margin-bottom: 4px; align-items: center;">
-      <input type="text" class="form-input" placeholder="Header" value="${escapeUAHtml(header.key)}"
-        onchange="updateChannelUAHeader(${index}, 'key', this.value)" style="flex: 1; min-width: 60px; padding: 4px 8px; font-size: 12px;">
-      <input type="text" class="form-input" placeholder="Value" value="${escapeUAHtml(header.value)}"
-        onchange="updateChannelUAHeader(${index}, 'value', this.value)" style="flex: 2; min-width: 100px; padding: 4px 8px; font-size: 12px;">
-      <button type="button" class="btn btn-danger btn-sm" onclick="removeChannelUAHeader(${index})" style="padding: 2px 6px; font-size: 12px;">×</button>
-    </div>
-  `).join('');
-}
-
-function escapeUAHtml(text) {
-  if (!text) return '';
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function addChannelUAItem() {
-  channelUAItems.push({ key: '', value: '' });
-  renderChannelUAItems();
-}
-
-function removeChannelUAItem(index) {
-  channelUAItems.splice(index, 1);
-  renderChannelUAItems();
-}
-
-function updateChannelUAItem(index, field, value) {
-  if (channelUAItems[index]) {
-    channelUAItems[index][field] = value;
-  }
-}
-
-function addChannelUAHeader() {
-  channelUAHeaders.push({ key: '', value: '' });
-  renderChannelUAHeaders();
-}
-
-function removeChannelUAHeader(index) {
-  channelUAHeaders.splice(index, 1);
-  renderChannelUAHeaders();
-}
-
-function updateChannelUAHeader(index, field, value) {
-  if (channelUAHeaders[index]) {
-    channelUAHeaders[index][field] = value;
-  }
-}
-
-function collectChannelUAConfigForSave() {
-  const mode = document.getElementById('channelUAConfigMode')?.value || 'passthrough';
-
-  let uaRewriteEnabled = false;
-  let uaOverride = '';
-  let uaPrefix = '';
-  let uaSuffix = '';
-
-  if (mode === 'override') {
-    uaRewriteEnabled = true;
-    const uaItem = channelUAItems.find(i => i.key.toLowerCase() === 'user-agent');
-    uaOverride = uaItem ? uaItem.value : '';
-    // 如果没有指定 User-Agent 字段，但有其他字段，也用第一个字段的值
-    if (!uaOverride && channelUAItems.length > 0) {
-      uaOverride = channelUAItems[0].value;
-    }
-  } else if (mode === 'append') {
-    uaRewriteEnabled = true;
-    const prefixItem = channelUAItems.find(i => i.key.toLowerCase() === 'prefix');
-    const suffixItem = channelUAItems.find(i => i.key.toLowerCase() === 'suffix');
-    uaPrefix = prefixItem ? prefixItem.value : '';
-    uaSuffix = suffixItem ? suffixItem.value : '';
-    // 如果没有指定 Prefix/Suffix 字段，但有两个字段，第一个作为 prefix，第二个作为 suffix
-    if (!uaPrefix && !uaSuffix && channelUAItems.length >= 1) {
-      uaPrefix = channelUAItems[0].value;
-    }
-    if (!uaSuffix && channelUAItems.length >= 2) {
-      uaSuffix = channelUAItems[1].value;
-    }
-  }
-
-  // 同步到旧字段（向后兼容）
-  document.getElementById('channelUARewriteEnabled').checked = uaRewriteEnabled;
-  document.getElementById('channelUAOverride').value = uaOverride;
-  document.getElementById('channelUAPrefix').value = uaPrefix;
-  document.getElementById('channelUASuffix').value = uaSuffix;
-
-  return { uaRewriteEnabled, uaOverride, uaPrefix, uaSuffix };
-}
-
 // ============================================================================
 // UA 配置模态框
 // ============================================================================

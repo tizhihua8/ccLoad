@@ -528,43 +528,7 @@
                   <span style="color: var(--neutral-500); font-size: 12px;">$</span>
                 </div>
               </div>
-              <!-- UA 配置区域 -->
-              <div class="channel-editor-inline-field channel-editor-inline-field--ua" style="flex: 0 0 auto;">
-                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaConfigMode">配置模式</label>
-                <div class="channel-editor-inline-field-input">
-                  <select id="channelUAConfigMode" class="form-input" style="width: 180px; min-width: 180px;" data-change-action="change-channel-ua-mode">
-                    <option value="passthrough" data-i18n="channels.uaModePassthrough">透传（原样传递客户端 UA）</option>
-                    <option value="override" data-i18n="channels.uaModeOverride">覆写（完全替换指定字段）</option>
-                    <option value="append" data-i18n="channels.uaModeAppend">追加（在原有 UA 前后添加）</option>
-                    <option value="headers" data-i18n="channels.uaModeHeaders">Headers（修改请求头）</option>
-                  </select>
-                </div>
-              </div>
-              <!-- 覆写/追加模式的字段列表 -->
-              <div id="channelUAItemsContainer" class="channel-editor-inline-field channel-editor-inline-field--ua hidden" style="flex: 1 1 auto; min-width: 200px;">
-                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaItems">字段配置</label>
-                <div class="channel-editor-inline-field-input" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                  <div id="channelUAItemsList" class="ua-items-list" style="width: 100%;">
-                    <!-- 动态添加的字段行 -->
-                  </div>
-                  <button type="button" class="btn btn-secondary btn-sm" data-action="add-channel-ua-item" data-i18n="channels.addUAItem">添加字段</button>
-                </div>
-              </div>
-              <!-- Headers 模式的请求头列表 -->
-              <div id="channelUAHeadersContainer" class="channel-editor-inline-field channel-editor-inline-field--ua hidden" style="flex: 1 1 auto; min-width: 200px;">
-                <label class="form-label channel-editor-inline-label" data-i18n="channels.uaHeaders">请求头配置</label>
-                <div class="channel-editor-inline-field-input" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                  <div id="channelUAHeadersList" class="ua-headers-list" style="width: 100%;">
-                    <!-- 动态添加的请求头行 -->
-                  </div>
-                  <button type="button" class="btn btn-secondary btn-sm" data-action="add-channel-ua-header" data-i18n="channels.addUAHeader">添加请求头</button>
-                </div>
-              </div>
-              <!-- 保留旧字段用于向后兼容，但隐藏 -->
-              <input type="hidden" id="channelUARewriteEnabled">
-              <input type="hidden" id="channelUAOverride">
-              <input type="hidden" id="channelUAPrefix">
-              <input type="hidden" id="channelUASuffix">
+              <!-- UA 配置已移至列表页 UA 按钮打开模态框 -->
             </div>
             <div class="channel-editor-footer-actions">
               <button type="button" class="btn btn-secondary" data-action="close-channel-modal"

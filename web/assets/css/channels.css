@@ -2742,3 +2742,19 @@
   color: #6b7280;
   margin-bottom: 8px;
 }
+
+/* UA 配置按钮样式 */
+.channel-action-btn[data-action="ua"] {
+  color: var(--primary-600, #2563eb);
+  border: 1px solid var(--primary-200, #bfdbfe);
+  background: var(--primary-50, #eff6ff);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.channel-action-btn[data-action="ua"]:hover {
+  background: var(--primary-100, #dbeafe);
+  border-color: var(--primary-300, #93c5fd);
+}
