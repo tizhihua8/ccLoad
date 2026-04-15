@@ -27,11 +27,15 @@ func (s *Server) HandleSetChannelCooldown(c *gin.Context) {
 	}
 
 	if req.DurationMs == 0 {
-		// 清除冷却：调用 ResetChannelCooldown 彻底重置
+		// 清除冷却：数据库重置 + 内存缓存清除
 		if err := s.store.ResetChannelCooldown(c.Request.Context(), id); err != nil {
 			RespondError(c, http.StatusInternalServerError, err)
 			return
 		}
+		if s.cooldownManager != nil {
+			_ = s.cooldownManager.ClearChannelCooldown(c.Request.Context(), id)
+		}
+		s.invalidateCooldownCache()
 		s.InvalidateChannelListCache()
 		RespondJSON(c, http.StatusOK, gin.H{"message": "渠道冷却已清除"})
 	} else {
@@ -40,6 +44,7 @@ func (s *Server) HandleSetChannelCooldown(c *gin.Context) {
 			RespondError(c, http.StatusInternalServerError, err)
 			return
 		}
+		s.invalidateCooldownCache()
 		s.InvalidateChannelListCache()
 		RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("渠道已冷却 %d 毫秒", req.DurationMs)})
 	}
@@ -71,6 +76,7 @@ func (s *Server) HandleSetKeyCooldown(c *gin.Context) {
 			RespondError(c, http.StatusInternalServerError, err)
 			return
 		}
+		s.invalidateCooldownCache()
 		s.InvalidateAPIKeysCache(id)
 		RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("Key #%d 冷却已清除", keyIndex+1)})
 	} else {
@@ -79,6 +85,7 @@ func (s *Server) HandleSetKeyCooldown(c *gin.Context) {
 			RespondError(c, http.StatusInternalServerError, err)
 			return
 		}
+		s.invalidateCooldownCache()
 		s.InvalidateAPIKeysCache(id)
 		RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("Key #%d 已冷却 %d 毫秒", keyIndex+1, req.DurationMs)})
 	}
