@@ -26,17 +26,23 @@ func (s *Server) HandleSetChannelCooldown(c *gin.Context) {
 		return
 	}
 
-	until := time.Now().Add(time.Duration(req.DurationMs) * time.Millisecond)
-	err = s.store.SetChannelCooldown(c.Request.Context(), id, until)
-	if err != nil {
-		RespondError(c, http.StatusInternalServerError, err)
-		return
+	if req.DurationMs == 0 {
+		// 清除冷却：调用 ResetChannelCooldown 彻底重置
+		if err := s.store.ResetChannelCooldown(c.Request.Context(), id); err != nil {
+			RespondError(c, http.StatusInternalServerError, err)
+			return
+		}
+		s.InvalidateChannelListCache()
+		RespondJSON(c, http.StatusOK, gin.H{"message": "渠道冷却已清除"})
+	} else {
+		until := time.Now().Add(time.Duration(req.DurationMs) * time.Millisecond)
+		if err := s.store.SetChannelCooldown(c.Request.Context(), id, until); err != nil {
+			RespondError(c, http.StatusInternalServerError, err)
+			return
+		}
+		s.InvalidateChannelListCache()
+		RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("渠道已冷却 %d 毫秒", req.DurationMs)})
 	}
-
-	// [INFO] 修复：使渠道缓存失效，确保前端能立即看到冷却状态变化
-	s.InvalidateChannelListCache()
-
-	RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("渠道已冷却 %d 毫秒", req.DurationMs)})
 }
 
 // HandleSetKeyCooldown 设置Key级别冷却
@@ -60,15 +66,20 @@ func (s *Server) HandleSetKeyCooldown(c *gin.Context) {
 		return
 	}
 
-	until := time.Now().Add(time.Duration(req.DurationMs) * time.Millisecond)
-	err = s.store.SetKeyCooldown(c.Request.Context(), id, keyIndex, until)
-	if err != nil {
-		RespondError(c, http.StatusInternalServerError, err)
-		return
+	if req.DurationMs == 0 {
+		if err := s.store.ResetKeyCooldown(c.Request.Context(), id, keyIndex); err != nil {
+			RespondError(c, http.StatusInternalServerError, err)
+			return
+		}
+		s.InvalidateAPIKeysCache(id)
+		RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("Key #%d 冷却已清除", keyIndex+1)})
+	} else {
+		until := time.Now().Add(time.Duration(req.DurationMs) * time.Millisecond)
+		if err := s.store.SetKeyCooldown(c.Request.Context(), id, keyIndex, until); err != nil {
+			RespondError(c, http.StatusInternalServerError, err)
+			return
+		}
+		s.InvalidateAPIKeysCache(id)
+		RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("Key #%d 已冷却 %d 毫秒", keyIndex+1, req.DurationMs)})
 	}
-
-	// [INFO] 修复：使API Keys缓存失效，确保前端能立即看到冷却状态
-	s.InvalidateAPIKeysCache(id)
-
-	RespondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("Key #%d 已冷却 %d 毫秒", keyIndex+1, req.DurationMs)})
 }

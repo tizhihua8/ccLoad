@@ -228,7 +228,7 @@ type ChannelImportSummary struct {
 
 // CooldownRequest 冷却设置请求
 type CooldownRequest struct {
-	DurationMs int64 `json:"duration_ms" binding:"required,min=1000"` // 最少1秒
+	DurationMs int64 `json:"duration_ms" binding:"gte=0"` // 0=清除冷却, >0=设置冷却（gte=0 表示 >=0，不传时默认0）
 }
 
 // SettingUpdateRequest 系统配置更新请求
