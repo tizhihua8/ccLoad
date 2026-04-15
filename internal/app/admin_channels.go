@@ -513,7 +513,19 @@ func (s *Server) handleUpdateChannel(c *gin.Context, id int64) {
 		strategyChanged = oldStrategy != keyStrategy
 	}
 
-	upd, err := s.store.UpdateConfig(c.Request.Context(), id, req.ToConfig())
+	// [FIX] 2026-04: 保留原有UA配置，防止修改渠道名称时丢失UA覆写设置
+	// 需要先加载现有配置，因为 existing 在前面可能已经过期
+	currentCfg, _ := s.store.GetConfig(c.Request.Context(), id)
+	if currentCfg == nil {
+		currentCfg = existing // 回退到之前的 existing
+	}
+	newCfg := req.ToConfig()
+	newCfg.UARewriteEnabled = currentCfg.UARewriteEnabled
+	newCfg.UAOverride = currentCfg.UAOverride
+	newCfg.UAPrefix = currentCfg.UAPrefix
+	newCfg.UASuffix = currentCfg.UASuffix
+	newCfg.UAConfig = currentCfg.UAConfig
+	upd, err := s.store.UpdateConfig(c.Request.Context(), id, newCfg)
 	if err != nil {
 		RespondError(c, http.StatusNotFound, err)
 		return
