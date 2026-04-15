@@ -1788,7 +1788,6 @@ function loadUAConfig(channel) {
     }
 
     // 加载请求体重写独立开关（默认启用，如果有 body_operations）
-    const bodyRewriteEnabled = document.getElementById('uaBodyRewriteEnabled');
     if (bodyRewriteEnabled) {
       bodyRewriteEnabled.checked = channel.ua_config.body_rewrite_enabled ?? (channel.ua_config.body_operations?.length > 0);
     }
@@ -1934,7 +1933,6 @@ function collectUAConfig() {
   });
 
   // 收集请求体重写独立开关
-  const bodyRewriteEnabled = document.getElementById('uaBodyRewriteEnabled')?.checked ?? false;
 
   return { mode, items, headers, bodyOperations, bodyRewriteEnabled };
 }

@@ -265,7 +265,6 @@ func TestProxy_BodyOp_Set(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{Op: string(model.BodyOpSet), Path: "stream", Value: "true"},
 		},
@@ -294,7 +293,6 @@ func TestProxy_BodyOp_Delete(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{Op: string(model.BodyOpDelete), Path: "temperature"},
 		},
@@ -328,7 +326,6 @@ func TestProxy_BodyOp_Rename(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{Op: string(model.BodyOpRename), From: "max_tokens", To: "max_completion_tokens"},
 		},
@@ -363,7 +360,6 @@ func TestProxy_BodyOp_Copy(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{Op: string(model.BodyOpCopy), From: "model", To: "original_model"},
 		},
@@ -396,7 +392,6 @@ func TestProxy_BodyOp_Set_WithCondition_True(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{
 				Op:        string(model.BodyOpSet),
@@ -430,7 +425,6 @@ func TestProxy_BodyOp_Set_WithCondition_False(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{
 				Op:        string(model.BodyOpSet),
@@ -466,7 +460,6 @@ func TestProxy_BodyOp_MultipleOps(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			// 1. 删除 temperature
 			{Op: string(model.BodyOpDelete), Path: "temperature"},
@@ -522,7 +515,6 @@ func TestProxy_UA_BodyOp_Combined(t *testing.T) {
 		Items: []model.UAConfigItem{
 			{Field: "User-Agent", Value: "CombinedTest/1.0"},
 		},
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{Op: string(model.BodyOpSet), Path: "stream", Value: "true"},
 			{Op: string(model.BodyOpDelete), Path: "temperature"},
@@ -573,7 +565,6 @@ func TestProxy_BodyOp_Set_WithMaxTokensCondition(t *testing.T) {
 	// 模拟 Fireworks AI 场景: max_tokens > 4096 时设置 stream_options
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{
 				Op:        string(model.BodyOpSet),
@@ -611,7 +602,6 @@ func TestProxy_BodyOp_Set_WithMaxTokensCondition_NotMet(t *testing.T) {
 
 	uaConfig := &model.UAConfig{
 		Mode:               model.UAConfigModePassThrough,
-		BodyRewriteEnabled: true,
 		BodyOperations: []model.BodyOperation{
 			{
 				Op:        string(model.BodyOpSet),
