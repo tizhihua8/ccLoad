@@ -1,12 +1,14 @@
 package app
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"ccLoad/internal/version"
 
@@ -121,10 +123,22 @@ func serveHTMLWithVersion(c *gin.Context, filePath string) {
 	}
 
 	// 替换版本号占位符
-	html := strings.ReplaceAll(string(content), "__VERSION__", version.Version)
+	// 使用 Version，如果是 dev 则使用 Commit 或时间戳确保唯一性
+	cacheVersion := version.Version
+	if cacheVersion == "dev" {
+		if version.Commit != "unknown" {
+			cacheVersion = "dev-" + version.Commit
+		} else {
+			cacheVersion = "dev-" + fmt.Sprintf("%d", time.Now().Unix())
+		}
+	}
+	html := strings.ReplaceAll(string(content), "__VERSION__", cacheVersion)
 
 	// HTML 不缓存，确保用户总能获取最新版本号引用
-	c.Header("Cache-Control", "no-cache, must-revalidate")
+	// 使用 no-store 防止任何形式的缓存，包括 CDN/代理
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	c.Header("Pragma", "no-cache") // HTTP/1.0 兼容
+	c.Header("Expires", "0")      // 过期时间设为过去
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, html)
 }
