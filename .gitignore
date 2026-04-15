@@ -55,7 +55,7 @@ AGENTS.md
 dist
 *.bak
 .docs
-docs/
+# docs/  - 文档目录，不再忽略
 .worktrees/
 # 步骤1：忽略所有目录下的 claude.md
 **/claude.md
