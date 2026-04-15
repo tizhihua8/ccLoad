@@ -250,7 +250,7 @@ function setupFilterListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const modal = document.getElementById('clearCooldownModal');
-      if (modal && modal.classList.contains('active')) {
+      if (modal && modal.classList.contains('show')) {
         closeClearCooldownModal();
       }
     }
@@ -278,12 +278,12 @@ function openClearCooldownModal() {
   }
 
   const modal = document.getElementById('clearCooldownModal');
-  if (modal) modal.classList.add('active');
+  if (modal) modal.classList.add('show');
 }
 
 function closeClearCooldownModal() {
   const modal = document.getElementById('clearCooldownModal');
-  if (modal) modal.classList.remove('active');
+  if (modal) modal.classList.remove('show');
   selectedCooldownChannelIds.clear();
 }
 
