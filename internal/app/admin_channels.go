@@ -391,6 +391,54 @@ func (s *Server) handleUpdateChannel(c *gin.Context, id int64) {
 		}
 	}
 
+	// [FIX] 检查是否为 UA 配置部分更新（仅包含 ua_config 相关字段）
+	// 允许前端只发送 UA 配置而不需要提供完整的渠道信息
+	uaOnlyFields := []string{"ua_rewrite_enabled", "ua_override", "ua_prefix", "ua_suffix", "ua_config"}
+	isUAOnlyUpdate := len(rawReq) > 0
+	for key := range rawReq {
+		found := false
+		for _, uaField := range uaOnlyFields {
+			if key == uaField {
+				found = true
+				break
+			}
+		}
+		if !found {
+			isUAOnlyUpdate = false
+			break
+		}
+	}
+	if isUAOnlyUpdate {
+		// 只更新 UA 配置字段
+		if v, ok := rawReq["ua_rewrite_enabled"].(bool); ok {
+			existing.UARewriteEnabled = v
+		}
+		if v, ok := rawReq["ua_override"].(string); ok {
+			existing.UAOverride = v
+		}
+		if v, ok := rawReq["ua_prefix"].(string); ok {
+			existing.UAPrefix = v
+		}
+		if v, ok := rawReq["ua_suffix"].(string); ok {
+			existing.UASuffix = v
+		}
+		if v, ok := rawReq["ua_config"].(map[string]any); ok && len(v) > 0 {
+			// 序列化后反序列化为 UAConfig
+			uaBytes, _ := sonic.Marshal(v)
+			var uaConfig model.UAConfig
+			if err := sonic.Unmarshal(uaBytes, &uaConfig); err == nil {
+				existing.UAConfig = &uaConfig
+			}
+		}
+		upd, err := s.store.UpdateConfig(c.Request.Context(), id, existing)
+		if err != nil {
+			RespondError(c, http.StatusInternalServerError, err)
+			return
+		}
+		RespondJSON(c, http.StatusOK, upd)
+		return
+	}
+
 	// 处理完整更新：重新序列化为ChannelRequest
 	reqBytes, err := sonic.Marshal(rawReq)
 	if err != nil {
