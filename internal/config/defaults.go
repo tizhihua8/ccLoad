@@ -112,6 +112,21 @@ const (
 	SQLiteConnMaxLifetime = 5 * time.Minute
 )
 
+// MySQL连接池配置常量
+const (
+	// MySQLMaxOpenConns 最大连接数
+	// 25：支持较高并发，避免请求排队等待数据库连接
+	MySQLMaxOpenConns = 25
+
+	// MySQLMaxIdleConns 最大空闲连接数
+	// 与 MaxOpenConns 相同，避免空闲连接被回收后重建
+	MySQLMaxIdleConns = 25
+
+	// MySQLConnMaxLifetime 连接最大生命周期
+	// 5分钟：平衡连接复用与防止使用过期连接
+	MySQLConnMaxLifetime = 5 * time.Minute
+)
+
 // 性能优化配置常量
 const (
 	// LogCleanupInterval 日志清理间隔

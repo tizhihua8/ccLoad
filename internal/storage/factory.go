@@ -115,10 +115,10 @@ func createMySQLStore(dsn string) (*sqlstore.SQLStore, error) {
 		return nil, fmt.Errorf("打开MySQL连接失败: %w", err)
 	}
 
-	// 连接池配置
-	db.SetMaxOpenConns(config.SQLiteMaxOpenConnsFile * 2) // MySQL可以更高并发
-	db.SetMaxIdleConns(config.SQLiteMaxIdleConnsFile * 2)
-	db.SetConnMaxLifetime(config.SQLiteConnMaxLifetime)
+	// 连接池配置（支持环境变量覆盖）
+	db.SetMaxOpenConns(getEnvInt("CCLOAD_MYSQL_MAX_OPEN_CONNS", config.MySQLMaxOpenConns))
+	db.SetMaxIdleConns(getEnvInt("CCLOAD_MYSQL_MAX_IDLE_CONNS", config.MySQLMaxIdleConns))
+	db.SetConnMaxLifetime(config.MySQLConnMaxLifetime)
 
 	// 测试连接（带超时，Fail-Fast）
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), config.StartupDBPingTimeout)
@@ -302,4 +302,18 @@ func getLogSyncDays() int {
 		return 7
 	}
 	return days
+}
+
+// getEnvInt 从环境变量读取整数配置，格式错误或不存在时返回默认值
+func getEnvInt(key string, defaultVal int) int {
+	valStr := os.Getenv(key)
+	if valStr == "" {
+		return defaultVal
+	}
+	val, err := strconv.Atoi(valStr)
+	if err != nil || val < 0 {
+		log.Printf("[WARN] 无效的 %s=%s，使用默认值 %d", key, valStr, defaultVal)
+		return defaultVal
+	}
+	return val
 }

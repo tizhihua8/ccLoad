@@ -708,6 +708,8 @@ Check out the awesome admin dashboard 👇
 |----------|---------|-------------|
 | `CCLOAD_PASS` | None | Admin password (**Required**, exits if not set) |
 | `CCLOAD_MYSQL` | None | MySQL DSN (optional, format: `user:pass@tcp(host:port)/db?charset=utf8mb4`)<br/>**If set uses MySQL, otherwise SQLite** |
+| `CCLOAD_MYSQL_MAX_OPEN_CONNS` | `25` | MySQL max open connections (increase to 50-100 for high concurrency) |
+| `CCLOAD_MYSQL_MAX_IDLE_CONNS` | `25` | MySQL max idle connections (usually same as OPEN) |
 | `CCLOAD_ENABLE_SQLITE_REPLICA` | `0` | Hybrid storage mode switch (`1`=enable, see below) |
 | `CCLOAD_SQLITE_LOG_DAYS` | `7` | Days of logs to restore from MySQL on startup in hybrid mode (-1=all, 0=no logs) |
 | `CCLOAD_ALLOW_INSECURE_TLS` | `0` | Disable upstream TLS cert validation (`1`=enable; ⚠️for troubleshooting/controlled intranet only) |
