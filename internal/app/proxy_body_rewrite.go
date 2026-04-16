@@ -48,6 +48,34 @@ func BuildBodyRewriteContext(body []byte) BodyRewriteContext {
 	return ctx
 }
 
+// StripDeferLoading 删除 tools 数组中所有元素的 defer_loading 字段
+// 用于兼容不支持该 Anthropic 专属字段的上游 API（如 Fireworks、Gemini）
+func StripDeferLoading(body []byte) []byte {
+	// 先检查是否有 tools 字段
+	toolsResult := gjson.GetBytes(body, "tools")
+	if !toolsResult.Exists() || !toolsResult.IsArray() {
+		return body
+	}
+
+	// 获取数组长度
+	arrayLen := toolsResult.Array()
+	if len(arrayLen) == 0 {
+		return body
+	}
+
+	result := body
+	// 从后往前删除，避免索引变化问题
+	for i := len(arrayLen) - 1; i >= 0; i-- {
+		path := fmt.Sprintf("tools.%d.defer_loading", i)
+		// 检查字段是否存在
+		if gjson.GetBytes(result, path).Exists() {
+			result, _ = sjson.DeleteBytes(result, path)
+		}
+	}
+
+	return result
+}
+
 // applyBodyOperations 应用请求体重写操作
 // 返回修改后的 body 和可能的错误
 func applyBodyOperations(body []byte, ops []model.BodyOperation, ctx BodyRewriteContext) ([]byte, error) {

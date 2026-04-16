@@ -651,6 +651,10 @@ func (s *Server) forwardAttempt(
 		}
 	}
 
+	// 自动剥离 Anthropic 专属的 defer_loading 字段（如果存在）
+	// 用于兼容 Fireworks、Gemini 等不支持该字段的上游 API
+	convertedBody = StripDeferLoading(convertedBody)
+
 	// 应用渠道级请求体重写（BodyOperations）
 	// 在协议转换后、转发前执行，确保能访问最终请求体
 	if cfg.UAConfig != nil && len(cfg.UAConfig.BodyOperations) > 0 {

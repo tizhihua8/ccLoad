@@ -1720,6 +1720,7 @@ let currentUAConfigChannelId = null;
 let uaItems = [];
 let uaHeaders = [];
 let uaBodyOps = []; // Body operations 列表
+let bodyRewriteEnabled = null; // Body 重写开关元素引用
 
 function openUAConfigModal(channelId) {
   currentUAConfigChannelId = channelId;
@@ -1728,6 +1729,9 @@ function openUAConfigModal(channelId) {
     if (window.showError) window.showError('Channel not found');
     return;
   }
+
+  // 初始化 DOM 引用
+  bodyRewriteEnabled = document.getElementById('bodyRewriteEnabled');
 
   // 加载当前 UA 配置
   loadUAConfig(channel);
